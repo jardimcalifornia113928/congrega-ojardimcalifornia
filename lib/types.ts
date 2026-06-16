@@ -16,9 +16,7 @@ export interface Publisher {
   baptismDate?: string;
   tags?: string[];
   designations?: string[];
-  ownerId?: string;
   createdAt?: string;
-  updatedAt?: string;
 }
 
 export interface Group {
@@ -26,7 +24,6 @@ export interface Group {
   name: string;
   count?: number;
   members?: string[];
-  ownerId?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -41,7 +38,6 @@ export interface FieldReportEntry {
 
 export interface FieldReport {
   reports: Record<string, FieldReportEntry>;
-  ownerId: string;
   month: number;
   year: number;
   updatedAt: string;

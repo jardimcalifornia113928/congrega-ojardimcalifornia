@@ -69,7 +69,6 @@ export function SettingsView() {
     try {
       await setDoc(doc(db, 'settings', SETTINGS_DOC_ID), {
         ...form,
-        ownerId: user.uid,
         updatedAt: new Date().toISOString(),
       });
       toast.success("Configurações salvas!", { id: toastId });

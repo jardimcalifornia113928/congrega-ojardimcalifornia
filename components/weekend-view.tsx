@@ -21,7 +21,6 @@ import {
   onSnapshot,
   setDoc,
   query,
-  where
 } from 'firebase/firestore';
 import { toast } from 'sonner';
 
@@ -241,8 +240,7 @@ export function WeekendView() {
   useEffect(() => {
     if (!user) return;
     const q = query(
-      collection(db, 'publishers'),
-      where('ownerId', '==', user.uid)
+      collection(db, 'publishers')
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const pubs = snapshot.docs.map(doc => ({
@@ -286,7 +284,6 @@ export function WeekendView() {
     try {
       await setDoc(doc(db, 'weekend_meetings', mondayStr), {
         ...meetingData,
-        ownerId: user.uid,
         weekMonday: mondayStr,
         weekFormatted: formatWeekRange(selectedDate),
         updatedAt: new Date().toISOString()

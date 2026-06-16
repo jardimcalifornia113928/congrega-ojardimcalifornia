@@ -22,8 +22,7 @@ import {
   doc, 
   onSnapshot, 
   setDoc, 
-  query, 
-  where 
+  query
 } from 'firebase/firestore';
 import { toast } from 'sonner';
 
@@ -357,8 +356,7 @@ export function MidweekView() {
   useEffect(() => {
     if (!user) return;
     const q = query(
-      collection(db, 'publishers'),
-      where('ownerId', '==', user.uid)
+      collection(db, 'publishers')
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const pubs = snapshot.docs.map(doc => ({
@@ -404,7 +402,6 @@ export function MidweekView() {
     try {
       await setDoc(doc(db, 'midweek_meetings', mondayStr), {
         ...meetingData,
-        ownerId: user.uid,
         weekMonday: mondayStr,
         weekFormatted: formatWeekRange(selectedDate),
         updatedAt: new Date().toISOString()

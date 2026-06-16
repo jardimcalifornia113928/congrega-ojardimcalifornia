@@ -180,7 +180,6 @@ export function AttendanceView() {
         ...attendance,
         midweekDay,
         weekendDay,
-        ownerId: user.uid,
         month: selectedMonth,
         year: selectedYear,
         updatedAt: new Date().toISOString()

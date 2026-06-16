@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/components/auth-provider';
 import { handleFirestoreError, OperationType } from '@/lib/firebase-utils';
-import { collection, onSnapshot, query, where, doc, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, doc, setDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
 
 const MONTHS = [
@@ -79,7 +79,7 @@ export function FieldReportView() {
     if (!user) return;
 
     const unsubPubs = onSnapshot(
-      query(collection(db, 'publishers'), where('ownerId', '==', user.uid)),
+      query(collection(db, 'publishers')),
       (snapshot) => {
         const pubs = snapshot.docs.map(d => ({
           id: d.id,
@@ -99,7 +99,7 @@ export function FieldReportView() {
     );
 
     const unsubGroups = onSnapshot(
-      query(collection(db, 'groups'), where('ownerId', '==', user.uid)),
+      query(collection(db, 'groups')),
       (snapshot) => {
         const gs = snapshot.docs.map(d => ({ id: d.id, name: d.data().name || '' }));
         setGroups(gs);
@@ -144,7 +144,6 @@ export function FieldReportView() {
     try {
       await setDoc(doc(db, 'field_reports', documentId), {
         reports,
-        ownerId: user.uid,
         month: selectedMonth,
         year: selectedYear,
         updatedAt: new Date().toISOString(),

@@ -16,7 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/components/auth-provider';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, where, doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, doc, getDoc, setDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
 
 interface DashboardProps {
@@ -69,7 +69,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     if (!user) return;
 
     const unsubPubs = onSnapshot(
-      query(collection(db, 'publishers'), where('ownerId', '==', user.uid)),
+      query(collection(db, 'publishers')),
       (snapshot) => {
         const pubs = snapshot.docs.map(d => ({
           id: d.id,
@@ -94,7 +94,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     );
 
     const unsubGroups = onSnapshot(
-      query(collection(db, 'groups'), where('ownerId', '==', user.uid)),
+      query(collection(db, 'groups')),
       (snapshot) => {
         const gs = snapshot.docs.map(d => ({ id: d.id, name: d.data().name || '' }));
         setGroups(gs);
@@ -221,7 +221,6 @@ export function Dashboard({ onNavigate }: DashboardProps) {
       await setDoc(docRef, {
         ...existingData,
         reports,
-        ownerId: user.uid,
         month: prevMonth.getMonth(),
         year: prevMonth.getFullYear(),
         updatedAt: new Date().toISOString(),

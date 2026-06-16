@@ -37,7 +37,6 @@ import {
   onSnapshot, 
   query, 
   orderBy, 
-  where,
   addDoc, 
   updateDoc, 
   doc, 
@@ -97,8 +96,7 @@ export function PublishersView() {
     }
 
     const q = query(
-      collection(db, 'publishers'), 
-      where('ownerId', '==', user.uid)
+      collection(db, 'publishers')
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const pubs = snapshot.docs.map(doc => ({
@@ -122,8 +120,7 @@ export function PublishersView() {
     }
 
     const q = query(
-      collection(db, 'groups'), 
-      where('ownerId', '==', user.uid)
+      collection(db, 'groups')
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const gs = snapshot.docs.map(doc => ({
@@ -201,7 +198,6 @@ export function PublishersView() {
       } else {
         const docRef = await addDoc(collection(db, 'publishers'), {
           ...pureData,
-          ownerId: user.uid,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
         });
@@ -319,7 +315,6 @@ export function PublishersView() {
         } else {
           await setDoc(doc(db, 'field_reports', docId), {
             reports: { [selectedPublisherId]: entry },
-            ownerId: user.uid,
             month: sm.month,
             year: sm.year,
             updatedAt: new Date().toISOString(),

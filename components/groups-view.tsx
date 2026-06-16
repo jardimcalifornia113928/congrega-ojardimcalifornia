@@ -32,7 +32,6 @@ import {
   addDoc, 
   query, 
   orderBy,
-  where,
   deleteDoc,
   doc,
   updateDoc,
@@ -57,8 +56,7 @@ export function GroupsView() {
     }
 
     const q = query(
-      collection(db, 'groups'), 
-      where('ownerId', '==', user.uid)
+      collection(db, 'groups')
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const groupsData = snapshot.docs.map(doc => ({
@@ -78,7 +76,7 @@ export function GroupsView() {
 
   React.useEffect(() => {
     if (!user) return;
-    const q = query(collection(db, 'publishers'), where('ownerId', '==', user.uid));
+    const q = query(collection(db, 'publishers'));
     const unsub = onSnapshot(q, (snap) => {
       setPublishers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
@@ -94,7 +92,6 @@ export function GroupsView() {
         name: newGroupName,
         count: 0,
         members: [],
-        ownerId: user.uid,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
