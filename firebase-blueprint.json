@@ -1,0 +1,71 @@
+{
+  "entities": {
+    "publisher": {
+      "title": "Publicador",
+      "description": "Dados do publicador da congregação",
+      "type": "object",
+      "properties": {
+        "firstName": { "type": "string" },
+        "middleName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "phone": { "type": "string" },
+        "secondaryPhone": { "type": "string" },
+        "profession": { "type": "string" },
+        "address": { "type": "string" },
+        "birthDate": { "type": "string", "format": "date" },
+        "gender": { "type": "string", "enum": ["masculino", "feminino"] },
+        "status": { "type": "string", "enum": ["ativo", "inativo", "removido", "mudou"] },
+        "groupId": { "type": "string" },
+        "responsibility": { "type": "string", "enum": ["publicador", "servo", "anciao"] },
+        "pioneerType": { "type": "string", "enum": ["nao", "auxiliar", "regular", "especial"] },
+        "baptismDate": { "type": "string", "format": "date" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "designations": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["firstName", "lastName"]
+    },
+    "registry": {
+      "title": "Registro S-21",
+      "description": "Atividade mensal do publicador",
+      "type": "object",
+      "properties": {
+        "publisherId": { "type": "string" },
+        "month": { "type": "string" },
+        "year": { "type": "string" },
+        "participated": { "type": "boolean" },
+        "studies": { "type": "number" },
+        "auxiliary": { "type": "boolean" },
+        "hours": { "type": "number" },
+        "observations": { "type": "string" }
+      },
+      "required": ["publisherId", "month", "year"]
+    },
+    "group": {
+      "title": "Grupo de Campo",
+      "description": "Grupos de serviço de campo",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "count": { "type": "number" },
+        "members": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["name"]
+    }
+  },
+  "firestore": {
+    "publishers": {
+      "schema": "publisher",
+      "description": "Lista de publicadores"
+    },
+    "registries": {
+      "schema": "registry",
+      "description": "Registros mensais S-21"
+    },
+    "groups": {
+      "schema": "group",
+      "description": "Grupos de campo"
+    }
+  }
+}
