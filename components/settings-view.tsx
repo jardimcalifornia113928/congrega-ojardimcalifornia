@@ -52,12 +52,12 @@ export function SettingsView() {
   useEffect(() => {
     if (!user) return;
     const docRef = doc(db, 'settings', `congregation_${user.uid}`);
-    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+    const unsubscribe = onSnapshot(docRef, (docSnap: any) => {
       if (docSnap.exists()) {
         const data = docSnap.data() as typeof form;
         setForm(prev => ({ ...prev, ...data }));
       }
-    }, (error) => {
+    }, (error: unknown) => {
       console.error("Error loading settings:", error);
     });
     return () => unsubscribe();
@@ -87,7 +87,7 @@ export function SettingsView() {
       for (const colName of COLLECTIONS) {
         const snapshot = await getDocs(collection(db, colName));
         backupData[colName] = {};
-        snapshot.forEach(docSnap => {
+        snapshot.forEach((docSnap: any) => {
           backupData[colName][docSnap.id] = docSnap.data();
         });
       }
@@ -120,6 +120,26 @@ export function SettingsView() {
     try {
       const text = await file.text();
       const data = JSON.parse(text);
+
+      if (!data || typeof data !== 'object' || Array.isArray(data)) {
+        throw new Error('Arquivo inválido: o backup deve ser um objeto JSON.');
+      }
+
+      for (const [colName, docs] of Object.entries(data)) {
+        if (colName === '_metadata') continue;
+        if (!COLLECTIONS.includes(colName)) {
+          throw new Error(`Coleção desconhecida "${colName}" encontrada no arquivo.`);
+        }
+        if (!docs || typeof docs !== 'object' || Array.isArray(docs)) {
+          throw new Error(`Coleção "${colName}" deve conter um objeto de documentos.`);
+        }
+        for (const [docId, docData] of Object.entries(docs as Record<string, unknown>)) {
+          if (!docData || typeof docData !== 'object' || Array.isArray(docData)) {
+            throw new Error(`Documento "${colName}/${docId}" inválido: o valor deve ser um objeto.`);
+          }
+        }
+      }
+
       let totalDocs = 0;
       for (const [colName, docs] of Object.entries(data)) {
         if (colName === '_metadata') continue;
@@ -131,8 +151,9 @@ export function SettingsView() {
       }
       toast.success(`Restauração concluída! ${totalDocs} documentos restaurados.`, { id: toastId });
     } catch (error) {
+      const msg = error instanceof Error ? error.message : "Erro ao restaurar backup.";
       console.error("Restore error:", error);
-      toast.error("Erro ao restaurar backup. Verifique se o arquivo é válido.", { id: toastId });
+      toast.error(msg, { id: toastId });
     } finally {
       setIsRestoring(false);
       if (fileInputRef.current) fileInputRef.current.value = '';

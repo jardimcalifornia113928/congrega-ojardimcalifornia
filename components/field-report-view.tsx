@@ -36,7 +36,11 @@ interface FieldReportEntry {
   observacao: string;
 }
 
-export function FieldReportView() {
+interface FieldReportViewProps {
+  onDirtyChange?: (dirty: boolean) => void;
+}
+
+export function FieldReportView({ onDirtyChange }: FieldReportViewProps) {
   const { user } = useAuth();
   const [publishers, setPublishers] = useState<PublisherSummary[]>([]);
   const [reports, setReports] = useState<Record<string, FieldReportEntry>>({});
@@ -57,11 +61,11 @@ export function FieldReportView() {
 
   const documentId = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
 
-  // Export dirty state globally for page.tsx navigation guard
+  // Notify parent about dirty state for navigation guard
   useEffect(() => {
-    (window as any).__fieldReportDirty = isDirty;
-    return () => { (window as any).__fieldReportDirty = false; };
-  }, [isDirty]);
+    onDirtyChange?.(isDirty);
+    return () => onDirtyChange?.(false);
+  }, [isDirty, onDirtyChange]);
 
   // beforeunload handler for browser-level navigation
   useEffect(() => {
@@ -80,7 +84,7 @@ export function FieldReportView() {
 
     const unsubPubs = onSnapshot(
       query(collection(db, 'publishers')),
-      (snapshot) => {
+      (snapshot: any) => {
         const pubs = snapshot.docs.map(d => ({
           id: d.id,
           firstName: d.data().firstName || '',
@@ -92,19 +96,19 @@ export function FieldReportView() {
         setPublishers(pubs);
         setIsLoading(false);
       },
-      (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'publishers');
+      (error: unknown) => {
         setIsLoading(false);
+        handleFirestoreError(error, OperationType.LIST, 'publishers');
       }
     );
 
     const unsubGroups = onSnapshot(
       query(collection(db, 'groups')),
-      (snapshot) => {
+      (snapshot: any) => {
         const gs = snapshot.docs.map(d => ({ id: d.id, name: d.data().name || '' }));
         setGroups(gs);
       },
-      (error) => handleFirestoreError(error, OperationType.LIST, 'groups')
+      (error: unknown) => handleFirestoreError(error, OperationType.LIST, 'groups')
     );
 
     return () => { unsubPubs(); unsubGroups(); };
@@ -114,13 +118,13 @@ export function FieldReportView() {
     if (!user) return;
 
     const docRef = doc(db, 'field_reports', documentId);
-    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+    const unsubscribe = onSnapshot(docRef, (docSnap: any) => {
       if (docSnap.exists()) {
-        setReports(docSnap.data().reports || {});
+        setReports(docSnap.data()?.reports || {});
       } else {
         setReports({});
       }
-    }, (error) => {
+    }, (error: unknown) => {
       console.error("Error fetching report:", error);
     });
     return () => unsubscribe();

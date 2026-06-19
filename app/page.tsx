@@ -22,21 +22,22 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [pendingTab, setPendingTab] = useState<string | null>(null);
   const [showNavConfirm, setShowNavConfirm] = useState(false);
+  const [fieldDirty, setFieldDirty] = useState(false);
 
   const handleNavigate = useCallback((tab: string) => {
-    if (activeTab === 'field' && tab !== 'field' && (window as any).__fieldReportDirty) {
+    if (activeTab === 'field' && tab !== 'field' && fieldDirty) {
       setPendingTab(tab);
       setShowNavConfirm(true);
     } else {
       setActiveTab(tab);
     }
-  }, [activeTab]);
+  }, [activeTab, fieldDirty]);
 
   const confirmNav = () => {
     if (pendingTab) setActiveTab(pendingTab);
     setPendingTab(null);
     setShowNavConfirm(false);
-    (window as any).__fieldReportDirty = false;
+    setFieldDirty(false);
   };
 
   const cancelNav = () => {
@@ -95,7 +96,7 @@ export default function Home() {
               <AttendanceView />
             </ScrollArea>
           )}
-          {activeTab === 'field' && <FieldReportView />}
+          {activeTab === 'field' && <FieldReportView onDirtyChange={setFieldDirty} />}
           {activeTab === 'prints' && (
             <ScrollArea className="flex-1 pr-3">
               <PrintsView />

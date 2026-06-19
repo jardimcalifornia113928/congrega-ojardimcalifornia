@@ -2,22 +2,21 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { auth, db } from '@/lib/firebase';
-import { onAuthStateChanged, User, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
+import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
 
-const SCREENS = [
-  'dashboard', 'publishers', 'groups', 'midweek', 'weekend',
-  'attendance', 'field', 'prints', 'settings', 'users',
-];
+const defaultPermissions = { leitura: false, inclusao: false, deletar: false, impressao: false, admin: false };
+const masterPermissions = { leitura: true, inclusao: true, deletar: true, impressao: true, admin: true };
 
-const defaultPermissions: Record<string, { cadastrar: boolean; limpar: boolean; excluir: boolean; backup: boolean; imprimir: boolean }> = {};
-SCREENS.forEach(s => {
-  defaultPermissions[s] = { cadastrar: false, limpar: false, excluir: false, backup: false, imprimir: false };
-});
+const isMasterEmail = (email: string | null | undefined): boolean => {
+  if (!email) return false;
+  const e = email.toLowerCase();
+  return e.includes('jardimcalifornia') || e === 'mariomarciofranco@gmail.com';
+};
 
 interface AuthContextType {
-  user: User | null;
+  user: any;
   loading: boolean;
   signIn: () => Promise<void>;
   logout: () => Promise<void>;
@@ -31,22 +30,22 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  const registerUser = async (currentUser: User) => {
+  const registerUser = async (currentUser: any) => {
     try {
       const docRef = doc(db, 'users', currentUser.uid);
       const docSnap = await getDoc(docRef);
       if (!docSnap.exists()) {
-        const isAdmin = currentUser.email?.toLowerCase().includes('jardimcalifornia');
+        const isMaster = isMasterEmail(currentUser.email);
         await setDoc(docRef, {
           uid: currentUser.uid,
           email: currentUser.email,
           displayName: currentUser.displayName || 'Usuário',
           photoURL: currentUser.photoURL || '',
-          role: isAdmin ? 'admin' : 'user',
-          permissions: isAdmin ? {} : { ...defaultPermissions },
+          role: isMaster ? 'admin' : 'user',
+          permissions: isMaster ? { ...masterPermissions } : { ...defaultPermissions },
           createdAt: new Date().toISOString(),
         });
       } else {
@@ -65,7 +64,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser: any) => {
       setUser(currentUser);
       if (currentUser) {
         registerUser(currentUser);

@@ -58,17 +58,17 @@ export function GroupsView() {
     const q = query(
       collection(db, 'groups')
     );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onSnapshot(q, (snapshot: any) => {
       const groupsData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })).sort((a: any, b: any) => (a.name || "").localeCompare(b.name || ""));
       setGroups(groupsData);
       setIsLoading(false);
-    }, (error) => {
+    }, (error: unknown) => {
       console.error("Groups fetch error:", error);
-      handleFirestoreError(error, OperationType.LIST, 'groups');
       setIsLoading(false);
+      handleFirestoreError(error, OperationType.LIST, 'groups');
     });
 
     return () => unsubscribe();
@@ -77,7 +77,7 @@ export function GroupsView() {
   React.useEffect(() => {
     if (!user) return;
     const q = query(collection(db, 'publishers'));
-    const unsub = onSnapshot(q, (snap) => {
+    const unsub = onSnapshot(q, (snap: any) => {
       setPublishers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
     return () => unsub();
@@ -183,7 +183,7 @@ export function GroupsView() {
                     <tr>
                       <td>${i + 1}</td>
                       <td>${p.firstName || ''} ${p.lastName || ''}</td>
-                      <td>${p.responsibility === 'anciao' ? 'Ancião' : p.responsibility === 'servo_ministerial' ? 'Servo Ministerial' : 'Publicador'}</td>
+                      <td>${p.responsibility === 'anciao' ? 'Ancião' : p.responsibility === 'servo' ? 'Servo Ministerial' : 'Publicador'}</td>
                       <td>${p.pioneerType === 'regular' ? 'Pioneiro Regular' : p.pioneerType === 'auxiliar' ? 'Auxiliar' : '-'}</td>
                     </tr>
                   `).join('')}
@@ -211,7 +211,7 @@ export function GroupsView() {
                     <tr>
                       <td>${i + 1}</td>
                       <td>${p.firstName || ''} ${p.lastName || ''}</td>
-                      <td>${p.responsibility === 'anciao' ? 'Ancião' : p.responsibility === 'servo_ministerial' ? 'Servo Ministerial' : 'Publicador'}</td>
+                      <td>${p.responsibility === 'anciao' ? 'Ancião' : p.responsibility === 'servo' ? 'Servo Ministerial' : 'Publicador'}</td>
                       <td>${p.pioneerType === 'regular' ? 'Pioneiro Regular' : p.pioneerType === 'auxiliar' ? 'Auxiliar' : '-'}</td>
                     </tr>
                   `).join('')}

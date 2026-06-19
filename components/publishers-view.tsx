@@ -98,16 +98,16 @@ export function PublishersView() {
     const q = query(
       collection(db, 'publishers')
     );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onSnapshot(q, (snapshot: any) => {
       const pubs = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })).sort((a: any, b: any) => (a.firstName || "").localeCompare(b.firstName || ""));
       setPublishers(pubs);
       setIsLoading(false);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'publishers');
+    }, (error: unknown) => {
       setIsLoading(false);
+      handleFirestoreError(error, OperationType.LIST, 'publishers');
     });
     return () => unsubscribe();
   }, [user]);
@@ -122,13 +122,13 @@ export function PublishersView() {
     const q = query(
       collection(db, 'groups')
     );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onSnapshot(q, (snapshot: any) => {
       const gs = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })).sort((a: any, b: any) => (a.name || "").localeCompare(b.name || ""));
       setGroups(gs);
-    }, (error) => {
+    }, (error: unknown) => {
       handleFirestoreError(error, OperationType.LIST, 'groups');
     });
     return () => unsubscribe();
@@ -266,22 +266,21 @@ export function PublishersView() {
     if (!selectedPublisherId || !user) return;
     setIsS21Loading(true);
     const fetchS21 = async () => {
-      const data: Record<string, any> = {};
-      for (const sm of serviceMonths) {
+      const results = await Promise.all(serviceMonths.map(async (sm) => {
         const docId = `${sm.year}-${String(sm.month + 1).padStart(2, '0')}`;
         try {
           const docSnap = await getDoc(doc(db, 'field_reports', docId));
           if (docSnap.exists()) {
             const reports = docSnap.data().reports || {};
-            data[docId] = reports[selectedPublisherId] || { participou: false, estudos: '', auxiliar: false, horas: '', observacao: '' };
-          } else {
-            data[docId] = { participou: false, estudos: '', auxiliar: false, horas: '', observacao: '' };
+            return { docId, entry: reports[selectedPublisherId] || { participou: false, estudos: '', auxiliar: false, horas: '', observacao: '' } };
           }
         } catch (e) {
           console.error(`S-21 load error for ${docId}:`, e);
-          data[docId] = { participou: false, estudos: '', auxiliar: false, horas: '', observacao: '' };
         }
-      }
+        return { docId, entry: { participou: false, estudos: '', auxiliar: false, horas: '', observacao: '' } };
+      }));
+      const data: Record<string, any> = {};
+      results.forEach(({ docId, entry }) => { data[docId] = entry; });
       setS21Data(data);
       setIsS21Loading(false);
     };
@@ -302,25 +301,17 @@ export function PublishersView() {
     if (!user || !selectedPublisherId) return;
     const toastId = toast.loading("Salvando registro S-21...");
     try {
-      for (const sm of serviceMonths) {
+      await Promise.all(serviceMonths.map(async (sm) => {
         const docId = `${sm.year}-${String(sm.month + 1).padStart(2, '0')}`;
         const entry = s21Data[docId];
-        if (!entry) continue;
-        const existSnap = await getDoc(doc(db, 'field_reports', docId));
-        if (existSnap.exists()) {
-          await updateDoc(doc(db, 'field_reports', docId), {
-            [`reports.${selectedPublisherId}`]: entry,
-            updatedAt: new Date().toISOString(),
-          });
-        } else {
-          await setDoc(doc(db, 'field_reports', docId), {
-            reports: { [selectedPublisherId]: entry },
-            month: sm.month,
-            year: sm.year,
-            updatedAt: new Date().toISOString(),
-          });
-        }
-      }
+        if (!entry) return;
+        await setDoc(doc(db, 'field_reports', docId), {
+          reports: { [selectedPublisherId]: entry },
+          month: sm.month,
+          year: sm.year,
+          updatedAt: new Date().toISOString(),
+        }, { merge: true });
+      }));
       toast.success("Registro S-21 salvo!", { id: toastId });
     } catch (error) {
       console.error("Save S-21 error:", error);
@@ -664,7 +655,7 @@ export function PublishersView() {
                 <TabsContent value="designation" className="m-0 space-y-6">
                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       {[
-                        { title: "Tesouros da Palavra", items: ["Presidente", "Orações", "Joias espirituais", "Discurso 10min", "Leitura da Bíblia"] },
+                        { title: "Tesouros da Palavra", items: ["Presidente", "Oração inicial", "Oração final", "Joias espirituais", "Discurso 10min", "Leitura da Bíblia"] },
                         { title: "Vida e Ministério", items: ["Iniciando conversas", "Cultivando o interesse", "Fazendo discípulos", "Explicando suas crenças", "Discurso", "Estudo Bíblico", "Ajudante"] },
                         { title: "Nossa vida cristã", items: ["Partes", "Estudo Bíblico", "Leitor"] },
                         { title: "Fim de semana", items: ["Orador local", "Orador fora", "Presidente", "Oração inicial", "Dirigente A Sentinela", "Leitor", "Oração final"] },

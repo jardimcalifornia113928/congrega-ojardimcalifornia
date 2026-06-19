@@ -21,8 +21,10 @@ import {
   onSnapshot,
   setDoc,
   query,
+  getDoc,
 } from 'firebase/firestore';
 import { toast } from 'sonner';
+import { MeetingPreviewModal, type MidweekPreviewData, type WeekendPreviewData } from '@/components/meeting-preview-modal';
 
 // ==========================================
 // AUTOCOMPLETE INPUT COMPONENT FOR PUBLISHERS
@@ -63,7 +65,8 @@ function PublisherInput({
 
   const getRoleDesignationKey = (role: string): string => {
     if (role === "Presidente") return "Fim de semana::Presidente";
-    if (role === "Oração inicial" || role === "Oração final") return "Tesouros da Palavra::Orações";
+    if (role === "Oração inicial") return "Tesouros da Palavra::Oração inicial";
+    if (role === "Oração final") return "Tesouros da Palavra::Oração final";
     if (role === "Orador local") return "Fim de semana::Orador local";
     if (role === "Orador visitante") return "Fim de semana::Orador fora";
     if (role === "Dirigente A sentinela") return "Fim de semana::Dirigente A Sentinela";
@@ -194,6 +197,8 @@ export function WeekendView() {
   const [meetingData, setMeetingData] = useState<WeekendMeetingData>(defaultMeetingData);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [midweekData, setMidweekData] = useState<MidweekPreviewData | null>(null);
 
   const getMondayStr = (date: Date): string => {
     const d = new Date(date);
@@ -242,7 +247,7 @@ export function WeekendView() {
     const q = query(
       collection(db, 'publishers')
     );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onSnapshot(q, (snapshot: any) => {
       const pubs = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -257,7 +262,7 @@ export function WeekendView() {
     setIsLoading(true);
 
     const docRef = doc(db, 'weekend_meetings', mondayStr);
-    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+    const unsubscribe = onSnapshot(docRef, (docSnap: any) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         setMeetingData({
@@ -268,10 +273,10 @@ export function WeekendView() {
         setMeetingData(defaultMeetingData);
       }
       setIsLoading(false);
-    }, (error) => {
+    }, (error: unknown) => {
       console.error("Error loading weekend meeting:", error);
-      handleFirestoreError(error, OperationType.GET, `weekend_meetings/${mondayStr}`);
       setIsLoading(false);
+      handleFirestoreError(error, OperationType.GET, `weekend_meetings/${mondayStr}`);
     });
 
     return () => unsubscribe();
@@ -301,6 +306,22 @@ export function WeekendView() {
   const handlePrint = () => {
     window.print();
   };
+
+  // Busca dados do meio de semana da mesma semana para o preview
+  useEffect(() => {
+    if (!user) return;
+    const fetchMidweek = async () => {
+      try {
+        const snap = await getDoc(doc(db, 'midweek_meetings', mondayStr));
+        if (snap.exists()) {
+          setMidweekData({ weekRange: formatWeekRange(selectedDate), ...snap.data() } as MidweekPreviewData);
+        } else {
+          setMidweekData(null);
+        }
+      } catch { /* silent */ }
+    };
+    fetchMidweek();
+  }, [user, mondayStr]);
 
   const updateField = (key: keyof WeekendMeetingData, value: any) => {
     setMeetingData(prev => ({
@@ -369,12 +390,15 @@ export function WeekendView() {
 
         <div className="flex gap-3">
           <Button
-            onClick={handlePrint}
+            onClick={() => setShowPreview(true)}
             variant="outline"
-            className="h-10 border-[#1E293B] text-[#94A3B8] font-bold rounded-xl gap-2 px-5 text-xs"
+            className="h-10 border-[#0EA5E9]/50 text-[#0EA5E9] hover:bg-[#0EA5E9]/10 font-bold rounded-xl gap-2 px-5 text-xs transition-all"
           >
-            <Printer className="h-4 w-4" />
-            Imprimir
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            Visualizar
           </Button>
           <Button
             onClick={handleSave}
@@ -768,6 +792,44 @@ export function WeekendView() {
         </div>
       </div>
 
+      {/* Modal de Pré-visualização */}
+      {showPreview && (
+        <MeetingPreviewModal
+          midweek={midweekData ?? {
+            weekRange: formatWeekRange(selectedDate),
+            president: '', openingPrayer: '', closingPrayer: '',
+            talkSpeaker: '', talkTheme: '', gemsSpeaker: '', bibleReadingReader: '',
+            part1Theme: '', part1Speaker: '', part1Assistant: '', part1SecondHelper: '',
+            part2Theme: '', part2Speaker: '', part2Assistant: '', part2SecondHelper: '',
+            part3Theme: '', part3Speaker: '', part3Assistant: '', part3SecondHelper: '',
+            part4Theme: '', part4Speaker: '', part4Assistant: '', part4SecondHelper: '',
+            lifePart1Theme: '', lifePart1Speaker: '',
+            lifePart2Theme: '', lifePart2Speaker: '',
+            lifePart3Theme: '', lifePart3Speaker: '',
+            cbsConductor: '', cbsReader: '',
+            mechanicalIndicador1: '', mechanicalIndicador2: '',
+            mechanicalMicrofone1: '', mechanicalMicrofone2: '',
+            mechanicalPalco: '', mechanicalAudioVideo: '',
+          }}
+          weekend={{
+            president: meetingData.president,
+            openingPrayer: meetingData.openingPrayer,
+            closingPrayer: meetingData.closingPrayer,
+            localSpeaker: meetingData.localSpeaker,
+            visitingSpeaker: meetingData.visitingSpeaker,
+            talkTheme: meetingData.talkTheme,
+            watchtowerConductor: meetingData.watchtowerConductor,
+            watchtowerReader: meetingData.watchtowerReader,
+            mechanicalIndicador1: meetingData.mechanicalIndicador1,
+            mechanicalIndicador2: meetingData.mechanicalIndicador2,
+            mechanicalMicrofone1: meetingData.mechanicalMicrofone1,
+            mechanicalMicrofone2: meetingData.mechanicalMicrofone2,
+            mechanicalPalco: meetingData.mechanicalPalco,
+            mechanicalAudioVideo: meetingData.mechanicalAudioVideo,
+          }}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
     </div>
     </div>
   );
