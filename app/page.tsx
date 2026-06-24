@@ -98,9 +98,9 @@ export default function Home() {
           )}
           {activeTab === 'field' && <FieldReportView onDirtyChange={setFieldDirty} />}
           {activeTab === 'prints' && (
-            <ScrollArea className="flex-1 pr-3">
+            <div className="flex-1 pr-3 overflow-y-auto">
               <PrintsView />
-            </ScrollArea>
+            </div>
           )}
           {activeTab === 'settings' && (
             <ScrollArea className="flex-1 pr-3">

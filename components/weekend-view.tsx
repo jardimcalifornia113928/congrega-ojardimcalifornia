@@ -22,6 +22,7 @@ import {
   setDoc,
   query,
   getDoc,
+  getDocs,
 } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { MeetingPreviewModal, type MidweekPreviewData, type WeekendPreviewData } from '@/components/meeting-preview-modal';
@@ -198,7 +199,9 @@ export function WeekendView() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [midweekData, setMidweekData] = useState<MidweekPreviewData | null>(null);
+  const [savedWeeks, setSavedWeeks] = useState<string[]>([]);
 
   const getMondayStr = (date: Date): string => {
     const d = new Date(date);
@@ -257,6 +260,17 @@ export function WeekendView() {
     return () => unsubscribe();
   }, [user]);
 
+  // Load saved weeks list
+  useEffect(() => {
+    if (!user) return;
+    const q = query(collection(db, 'weekend_meetings'));
+    const unsubscribe = onSnapshot(q, (snap) => {
+      const weeks = snap.docs.map(d => d.id).sort().reverse();
+      setSavedWeeks(weeks);
+    });
+    return () => unsubscribe();
+  }, [user]);
+
   useEffect(() => {
     if (!user) return;
     setIsLoading(true);
@@ -303,25 +317,58 @@ export function WeekendView() {
     }
   };
 
+  const handlePreview = async () => {
+    if (!user) return;
+    setIsPreviewLoading(true);
+    try {
+      const snap = await getDoc(doc(db, 'midweek_meetings', mondayStr));
+      const f = (v?: string) => v || '';
+
+      if (snap.exists()) {
+        const d = snap.data();
+        setMidweekData({
+          weekRange: formatWeekRange(selectedDate),
+          president: f(d.president),
+          openingPrayer: f(d.openingPrayer),
+          closingPrayer: f(d.closingPrayer),
+          talkSpeaker: f(d.talkSpeaker),
+          talkTheme: f(d.talkTheme),
+          gemsSpeaker: f(d.gemsSpeaker),
+          bibleReadingReader: f(d.bibleReadingReader),
+          part1Theme: f(d.part1Theme), part1Speaker: f(d.part1Speaker),
+          part1Assistant: f(d.part1Assistant), part1SecondHelper: f(d.part1SecondHelper),
+          part2Theme: f(d.part2Theme), part2Speaker: f(d.part2Speaker),
+          part2Assistant: f(d.part2Assistant), part2SecondHelper: f(d.part2SecondHelper),
+          part3Theme: f(d.part3Theme), part3Speaker: f(d.part3Speaker),
+          part3Assistant: f(d.part3Assistant), part3SecondHelper: f(d.part3SecondHelper),
+          part4Theme: f(d.part4Theme), part4Speaker: f(d.part4Speaker),
+          part4Assistant: f(d.part4Assistant), part4SecondHelper: f(d.part4SecondHelper),
+          lifePart1Theme: f(d.lifePart1Theme), lifePart1Speaker: f(d.lifePart1Speaker),
+          lifePart2Theme: f(d.lifePart2Theme), lifePart2Speaker: f(d.lifePart2Speaker),
+          lifePart3Theme: f(d.lifePart3Theme), lifePart3Speaker: f(d.lifePart3Speaker),
+          cbsConductor: f(d.cbsConductor), cbsReader: f(d.cbsReader),
+          mechanicalIndicador1: f(d.mechanicalIndicador1),
+          mechanicalIndicador2: f(d.mechanicalIndicador2),
+          mechanicalMicrofone1: f(d.mechanicalMicrofone1),
+          mechanicalMicrofone2: f(d.mechanicalMicrofone2),
+          mechanicalPalco: f(d.mechanicalPalco),
+          mechanicalAudioVideo: f(d.mechanicalAudioVideo),
+        });
+      } else {
+        setMidweekData(null);
+      }
+      setShowPreview(true);
+    } catch (error) {
+      console.error("Error loading midweek data:", error);
+      toast.error("Erro ao carregar dados do meio de semana.");
+    } finally {
+      setIsPreviewLoading(false);
+    }
+  };
+
   const handlePrint = () => {
     window.print();
   };
-
-  // Busca dados do meio de semana da mesma semana para o preview
-  useEffect(() => {
-    if (!user) return;
-    const fetchMidweek = async () => {
-      try {
-        const snap = await getDoc(doc(db, 'midweek_meetings', mondayStr));
-        if (snap.exists()) {
-          setMidweekData({ weekRange: formatWeekRange(selectedDate), ...snap.data() } as MidweekPreviewData);
-        } else {
-          setMidweekData(null);
-        }
-      } catch { /* silent */ }
-    };
-    fetchMidweek();
-  }, [user, mondayStr]);
 
   const updateField = (key: keyof WeekendMeetingData, value: any) => {
     setMeetingData(prev => ({
@@ -367,6 +414,11 @@ export function WeekendView() {
               <ChevronRight className="h-4 w-4" />
             </Button>
 
+            {/* Saved indicator */}
+            <span className={`text-[10px] font-bold px-2 py-1 rounded-md ${savedWeeks.includes(mondayStr) ? 'bg-emerald-500/20 text-emerald-400' : 'bg-yellow-500/10 text-yellow-500'}`}>
+              {savedWeeks.includes(mondayStr) ? 'Salvo' : 'Não salvo'}
+            </span>
+
             <div className="relative overflow-hidden">
               <input
                 type="date"
@@ -385,19 +437,43 @@ export function WeekendView() {
                 Buscar Data
               </Button>
             </div>
+
+            {/* Saved weeks dropdown */}
+            {savedWeeks.length > 0 && (
+              <select
+                value=""
+                onChange={(e) => {
+                  if (e.target.value) {
+                    const parts = e.target.value.split('-');
+                    setSelectedDate(new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])));
+                  }
+                }}
+                className="bg-[#1E293B]/40 border border-[#1E293B]/50 text-white text-xs rounded-lg px-2 py-1.5 h-8 focus:outline-none focus:border-[#0EA5E9] cursor-pointer"
+              >
+                <option value="">Semanas salvas</option>
+                {savedWeeks.map(w => (
+                  <option key={w} value={w}>{w}</option>
+                ))}
+              </select>
+            )}
           </div>
         </div>
 
         <div className="flex gap-3">
           <Button
-            onClick={() => setShowPreview(true)}
+            onClick={handlePreview}
+            disabled={isPreviewLoading}
             variant="outline"
             className="h-10 border-[#0EA5E9]/50 text-[#0EA5E9] hover:bg-[#0EA5E9]/10 font-bold rounded-xl gap-2 px-5 text-xs transition-all"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
+            {isPreviewLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+            )}
             Visualizar
           </Button>
           <Button

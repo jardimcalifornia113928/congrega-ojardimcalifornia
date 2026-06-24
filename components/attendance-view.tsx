@@ -123,7 +123,7 @@ export function AttendanceView() {
     setIsLoading(true);
 
     const docRef = doc(db, 'attendance', documentId);
-    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+    const unsubscribe = onSnapshot(docRef, (docSnap: any) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         setAttendance({
@@ -150,10 +150,10 @@ export function AttendanceView() {
         });
       }
       setIsLoading(false);
-    }, (error) => {
+    }, (error: unknown) => {
       console.error("Error fetching attendance data:", error);
-      handleFirestoreError(error, OperationType.GET, `attendance/${documentId}`);
       setIsLoading(false);
+      handleFirestoreError(error, OperationType.GET, `attendance/${documentId}`);
     });
 
     return () => unsubscribe();
@@ -335,13 +335,13 @@ export function AttendanceView() {
       {/* Painel de Configurações de Dias da Reunião (Expansível) */}
       {showConfig && (
         <div className="bg-[#0B1220]/90 border border-[#0EA5E9]/20 rounded-2xl p-4 space-y-4 no-print transition-all">
-          <h4 className="text-[10px] font-black text-[#0EA5E9] uppercase tracking-widest flex items-center gap-1.5">
+          <h4 className="text-[11.5px] font-black text-[#0EA5E9] uppercase tracking-widest flex items-center gap-1.5">
             <Settings2 className="h-3.5 w-3.5" />
             Dias de Reunião da Congregação
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-[#94A3B8] uppercase">Dia de Meio de Semana</label>
+              <label className="text-[11.5px] font-bold text-[#94A3B8] uppercase">Dia de Meio de Semana</label>
               <select
                 value={midweekDay}
                 onChange={(e) => handleMidweekDayChange(parseInt(e.target.value))}
@@ -353,7 +353,7 @@ export function AttendanceView() {
               </select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-[#94A3B8] uppercase">Dia de Fim de Semana</label>
+              <label className="text-[11.5px] font-bold text-[#94A3B8] uppercase">Dia de Fim de Semana</label>
               <select
                 value={weekendDay}
                 onChange={(e) => handleWeekendDayChange(parseInt(e.target.value))}
@@ -383,57 +383,57 @@ export function AttendanceView() {
         <div className="bg-[#0B1220]/70 border border-[#1E293B]/60 rounded-2xl p-6 print-card">
           <div className="flex items-center gap-2 mb-4 border-b border-[#1E293B]/40 pb-2">
             <TrendingUp className="h-4 w-4 text-[#0EA5E9] no-print" />
-            <h3 className="text-xs font-black text-white uppercase tracking-wider">Meio de Semana</h3>
+            <h3 className="text-xs text-white uppercase tracking-wider">Meio de Semana</h3>
           </div>
           
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-[#1E293B]/60">
-                  <th className="text-[10px] font-black text-[#64748B] uppercase py-3 px-2 print:text-black">Tipo</th>
+                  <th className="text-[11.5px] font-black text-[#64748B] uppercase py-3 px-0.5 print:text-black">Tipo</th>
                   
                   {/* Semana 1 */}
-                  <th className="text-center py-3 px-2">
-                    <span className="text-[10px] font-black text-[#64748B] uppercase block print:text-black">Semana 1</span>
-                    <span className="text-[10px] text-[#0EA5E9] font-bold block mt-0.5">{midweekDates[0] || "—"}</span>
+                  <th className="text-center py-3 px-0.5">
+                    <span className="text-[11.5px] font-black text-[#64748B] uppercase block print:text-black">Semana 1</span>
+                    <span className="text-[12px] text-[#0EA5E9] block mt-0.5">{midweekDates[0] || "—"}</span>
                   </th>
                   
                   {/* Semana 2 */}
-                  <th className="text-center py-3 px-2">
-                    <span className="text-[10px] font-black text-[#64748B] uppercase block print:text-black">Semana 2</span>
-                    <span className="text-[10px] text-[#0EA5E9] font-bold block mt-0.5">{midweekDates[1] || "—"}</span>
+                  <th className="text-center py-3 px-0.5">
+                    <span className="text-[11.5px] font-black text-[#64748B] uppercase block print:text-black">Semana 2</span>
+                    <span className="text-[12px] text-[#0EA5E9] block mt-0.5">{midweekDates[1] || "—"}</span>
                   </th>
                   
                   {/* Semana 3 */}
-                  <th className="text-center py-3 px-2">
-                    <span className="text-[10px] font-black text-[#64748B] uppercase block print:text-black">Semana 3</span>
-                    <span className="text-[10px] text-[#0EA5E9] font-bold block mt-0.5">{midweekDates[2] || "—"}</span>
+                  <th className="text-center py-3 px-0.5">
+                    <span className="text-[11.5px] font-black text-[#64748B] uppercase block print:text-black">Semana 3</span>
+                    <span className="text-[12px] text-[#0EA5E9] block mt-0.5">{midweekDates[2] || "—"}</span>
                   </th>
                   
                   {/* Semana 4 */}
-                  <th className="text-center py-3 px-2">
-                    <span className="text-[10px] font-black text-[#64748B] uppercase block print:text-black">Semana 4</span>
-                    <span className="text-[10px] text-[#0EA5E9] font-bold block mt-0.5">{midweekDates[3] || "—"}</span>
+                  <th className="text-center py-3 px-0.5">
+                    <span className="text-[11.5px] font-black text-[#64748B] uppercase block print:text-black">Semana 4</span>
+                    <span className="text-[12px] text-[#0EA5E9] block mt-0.5">{midweekDates[3] || "—"}</span>
                   </th>
                   
                   {/* Semana 5 */}
-                  <th className="text-center py-3 px-2">
-                    <span className="text-[10px] font-black text-[#64748B] uppercase block print:text-black">Semana 5</span>
-                    <span className="text-[10px] text-[#0EA5E9] font-bold block mt-0.5">{midweekDates[4] || "—"}</span>
+                  <th className="text-center py-3 px-0.5">
+                    <span className="text-[11.5px] font-black text-[#64748B] uppercase block print:text-black">Semana 5</span>
+                    <span className="text-[12px] text-[#0EA5E9] block mt-0.5">{midweekDates[4] || "—"}</span>
                   </th>
                   
-                  <th className="text-center text-[10px] font-black text-[#64748B] uppercase py-3 px-2 print:text-black">Total</th>
-                  <th className="text-center text-[10px] font-black text-[#64748B] uppercase py-3 px-2 print:text-black">Média</th>
+                  <th className="text-center text-[11.5px] font-black text-[#64748B] uppercase py-3 px-0.5 print:text-black">Total</th>
+                  <th className="text-center text-[11.5px] font-black text-[#64748B] uppercase py-3 px-0.5 print:text-black">Média</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#1E293B]/30">
                 {/* Presencial */}
                 <tr className="hover:bg-[#1E293B]/10 transition-colors">
-                  <td className="text-xs font-bold text-[#94A3B8] py-4 px-2 print:text-black">Presencial</td>
+                  <td className="text-xs font-bold text-[#94A3B8] py-3 px-0.5 print:text-black">Presencial</td>
                   {['w1', 'w2', 'w3', 'w4', 'w5'].map((week, idx) => {
                     const isActive = idx < midweekDates.length;
                     return (
-                      <td key={week} className="py-2 px-2 text-center">
+                      <td key={week} className="py-2 px-0.5 text-center">
                         <div className="hidden print:block text-xs text-black font-semibold">
                           {isActive ? (attendance.midweek.presencial[week as keyof AttendanceRow] || "—") : "—"}
                         </div>
@@ -442,7 +442,7 @@ export function AttendanceView() {
                           disabled={!isActive}
                           value={isActive ? attendance.midweek.presencial[week as keyof AttendanceRow] : ""}
                           onChange={(e) => handleInputChange('midweek', 'presencial', week as keyof AttendanceRow, e.target.value)}
-                          className={`print:hidden mx-auto h-9 w-20 text-center bg-[#1E293B]/10 border text-xs font-bold text-white rounded-lg focus:outline-none transition-all ${
+                          className={`print:hidden mx-auto h-9 w-14 text-center bg-[#1E293B]/10 border text-xs text-white rounded-lg focus:outline-none transition-all ${
                             isActive 
                               ? 'border-[#1E293B]/50 hover:border-[#1E293B] focus:border-[#0EA5E9]' 
                               : 'border-transparent opacity-30 cursor-not-allowed placeholder-[#64748B]'
@@ -452,17 +452,17 @@ export function AttendanceView() {
                       </td>
                     );
                   })}
-                  <td className="text-xs font-black text-center text-white py-4 px-2 print:text-black">{mwPresStats.total}</td>
-                  <td className="text-xs font-black text-center text-white py-4 px-2 print:text-black">{mwPresStats.average}</td>
+                  <td className="text-xs text-center text-white py-3 px-0.5 print:text-black">{mwPresStats.total}</td>
+                  <td className="text-xs text-center text-white py-3 px-0.5 print:text-black">{mwPresStats.average}</td>
                 </tr>
 
                 {/* Conectados */}
                 <tr className="hover:bg-[#1E293B]/10 transition-colors">
-                  <td className="text-xs font-bold text-[#94A3B8] py-4 px-2 print:text-black">Conectados</td>
+                  <td className="text-xs font-bold text-[#94A3B8] py-3 px-0.5 print:text-black">Conectados</td>
                   {['w1', 'w2', 'w3', 'w4', 'w5'].map((week, idx) => {
                     const isActive = idx < midweekDates.length;
                     return (
-                      <td key={week} className="py-2 px-2 text-center">
+                      <td key={week} className="py-2 px-0.5 text-center">
                         <div className="hidden print:block text-xs text-black font-semibold">
                           {isActive ? (attendance.midweek.conectados[week as keyof AttendanceRow] || "—") : "—"}
                         </div>
@@ -471,7 +471,7 @@ export function AttendanceView() {
                           disabled={!isActive}
                           value={isActive ? attendance.midweek.conectados[week as keyof AttendanceRow] : ""}
                           onChange={(e) => handleInputChange('midweek', 'conectados', week as keyof AttendanceRow, e.target.value)}
-                          className={`print:hidden mx-auto h-9 w-20 text-center bg-[#1E293B]/10 border text-xs font-bold text-white rounded-lg focus:outline-none transition-all ${
+                          className={`print:hidden mx-auto h-9 w-14 text-center bg-[#1E293B]/10 border text-xs text-white rounded-lg focus:outline-none transition-all ${
                             isActive 
                               ? 'border-[#1E293B]/50 hover:border-[#1E293B] focus:border-[#0EA5E9]' 
                               : 'border-transparent opacity-30 cursor-not-allowed placeholder-[#64748B]'
@@ -481,30 +481,30 @@ export function AttendanceView() {
                       </td>
                     );
                   })}
-                  <td className="text-xs font-black text-center text-white py-4 px-2 print:text-black">{mwConStats.total}</td>
-                  <td className="text-xs font-black text-center text-white py-4 px-2 print:text-black">{mwConStats.average}</td>
+                  <td className="text-xs text-center text-white py-3 px-0.5 print:text-black">{mwConStats.total}</td>
+                  <td className="text-xs text-center text-white py-3 px-0.5 print:text-black">{mwConStats.average}</td>
                 </tr>
 
                 {/* Total Row */}
                 <tr className="bg-[#1E293B]/10">
-                  <td className="text-xs font-black text-white py-4 px-2 print:text-black">Total</td>
-                  <td className="text-xs font-black text-center text-[#0EA5E9] py-4 px-2 print:text-black">
+                  <td className="text-xs text-white py-3 px-0.5 print:text-black">Total</td>
+                  <td className="text-xs text-center text-[#0EA5E9] py-3 px-0.5 print:text-black">
                     {midweekDates.length >= 1 ? mwTotalW1 : "—"}
                   </td>
-                  <td className="text-xs font-black text-center text-[#0EA5E9] py-4 px-2 print:text-black">
+                  <td className="text-xs text-center text-[#0EA5E9] py-3 px-0.5 print:text-black">
                     {midweekDates.length >= 2 ? mwTotalW2 : "—"}
                   </td>
-                  <td className="text-xs font-black text-center text-[#0EA5E9] py-4 px-2 print:text-black">
+                  <td className="text-xs text-center text-[#0EA5E9] py-3 px-0.5 print:text-black">
                     {midweekDates.length >= 3 ? mwTotalW3 : "—"}
                   </td>
-                  <td className="text-xs font-black text-center text-[#0EA5E9] py-4 px-2 print:text-black">
+                  <td className="text-xs text-center text-[#0EA5E9] py-3 px-0.5 print:text-black">
                     {midweekDates.length >= 4 ? mwTotalW4 : "—"}
                   </td>
-                  <td className="text-xs font-black text-center text-[#0EA5E9] py-4 px-2 print:text-black">
+                  <td className="text-xs text-center text-[#0EA5E9] py-3 px-0.5 print:text-black">
                     {midweekDates.length >= 5 ? mwTotalW5 : "—"}
                   </td>
-                  <td className="text-xs font-black text-center text-[#0EA5E9] py-4 px-2 print:text-black">{mwGrandTotal}</td>
-                  <td className="text-xs font-black text-center text-[#0EA5E9] py-4 px-2 print:text-black">{mwGrandAverage}</td>
+                  <td className="text-xs text-center text-[#0EA5E9] py-3 px-0.5 print:text-black">{mwGrandTotal}</td>
+                  <td className="text-xs text-center text-[#0EA5E9] py-3 px-0.5 print:text-black">{mwGrandAverage}</td>
                 </tr>
               </tbody>
             </table>
@@ -514,58 +514,58 @@ export function AttendanceView() {
         {/* TABELA 2: FIM DE SEMANA */}
         <div className="bg-[#0B1220]/70 border border-[#1E293B]/60 rounded-2xl p-6 print-card">
           <div className="flex items-center gap-2 mb-4 border-b border-[#1E293B]/40 pb-2">
-            <TrendingUp className="h-4 w-4 text-[#EF4444] no-print" />
-            <h3 className="text-xs font-black text-white uppercase tracking-wider">Fim de Semana</h3>
+            <TrendingUp className="h-4 w-4 text-[#34D399] no-print" />
+            <h3 className="text-xs text-white uppercase tracking-wider">Fim de Semana</h3>
           </div>
           
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-[#1E293B]/60">
-                  <th className="text-[10px] font-black text-[#64748B] uppercase py-3 px-2 print:text-black">Tipo</th>
+                  <th className="text-[11.5px] font-black text-[#64748B] uppercase py-3 px-0.5 print:text-black">Tipo</th>
                   
                   {/* Semana 1 */}
-                  <th className="text-center py-3 px-2">
-                    <span className="text-[10px] font-black text-[#64748B] uppercase block print:text-black">Semana 1</span>
-                    <span className="text-[10px] text-[#EF4444] font-bold block mt-0.5">{weekendDates[0] || "—"}</span>
+                  <th className="text-center py-3 px-0.5">
+                    <span className="text-[11.5px] font-black text-[#64748B] uppercase block print:text-black">Semana 1</span>
+                    <span className="text-[12px] text-[#34D399] block mt-0.5">{weekendDates[0] || "—"}</span>
                   </th>
                   
                   {/* Semana 2 */}
-                  <th className="text-center py-3 px-2">
-                    <span className="text-[10px] font-black text-[#64748B] uppercase block print:text-black">Semana 2</span>
-                    <span className="text-[10px] text-[#EF4444] font-bold block mt-0.5">{weekendDates[1] || "—"}</span>
+                  <th className="text-center py-3 px-0.5">
+                    <span className="text-[11.5px] font-black text-[#64748B] uppercase block print:text-black">Semana 2</span>
+                    <span className="text-[12px] text-[#34D399] block mt-0.5">{weekendDates[1] || "—"}</span>
                   </th>
                   
                   {/* Semana 3 */}
-                  <th className="text-center py-3 px-2">
-                    <span className="text-[10px] font-black text-[#64748B] uppercase block print:text-black">Semana 3</span>
-                    <span className="text-[10px] text-[#EF4444] font-bold block mt-0.5">{weekendDates[2] || "—"}</span>
+                  <th className="text-center py-3 px-0.5">
+                    <span className="text-[11.5px] font-black text-[#64748B] uppercase block print:text-black">Semana 3</span>
+                    <span className="text-[12px] text-[#34D399] block mt-0.5">{weekendDates[2] || "—"}</span>
                   </th>
                   
                   {/* Semana 4 */}
-                  <th className="text-center py-3 px-2">
-                    <span className="text-[10px] font-black text-[#64748B] uppercase block print:text-black">Semana 4</span>
-                    <span className="text-[10px] text-[#EF4444] font-bold block mt-0.5">{weekendDates[3] || "—"}</span>
+                  <th className="text-center py-3 px-0.5">
+                    <span className="text-[11.5px] font-black text-[#64748B] uppercase block print:text-black">Semana 4</span>
+                    <span className="text-[12px] text-[#34D399] block mt-0.5">{weekendDates[3] || "—"}</span>
                   </th>
                   
                   {/* Semana 5 */}
-                  <th className="text-center py-3 px-2">
-                    <span className="text-[10px] font-black text-[#64748B] uppercase block print:text-black">Semana 5</span>
-                    <span className="text-[10px] text-[#EF4444] font-bold block mt-0.5">{weekendDates[4] || "—"}</span>
+                  <th className="text-center py-3 px-0.5">
+                    <span className="text-[11.5px] font-black text-[#64748B] uppercase block print:text-black">Semana 5</span>
+                    <span className="text-[12px] text-[#34D399] block mt-0.5">{weekendDates[4] || "—"}</span>
                   </th>
                   
-                  <th className="text-center text-[10px] font-black text-[#64748B] uppercase py-3 px-2 print:text-black">Total</th>
-                  <th className="text-center text-[10px] font-black text-[#64748B] uppercase py-3 px-2 print:text-black">Média</th>
+                  <th className="text-center text-[11.5px] font-black text-[#64748B] uppercase py-3 px-0.5 print:text-black">Total</th>
+                  <th className="text-center text-[11.5px] font-black text-[#64748B] uppercase py-3 px-0.5 print:text-black">Média</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#1E293B]/30">
                 {/* Presencial */}
                 <tr className="hover:bg-[#1E293B]/10 transition-colors">
-                  <td className="text-xs font-bold text-[#94A3B8] py-4 px-2 print:text-black">Presencial</td>
+                  <td className="text-xs font-bold text-[#94A3B8] py-3 px-0.5 print:text-black">Presencial</td>
                   {['w1', 'w2', 'w3', 'w4', 'w5'].map((week, idx) => {
                     const isActive = idx < weekendDates.length;
                     return (
-                      <td key={week} className="py-2 px-2 text-center">
+                      <td key={week} className="py-2 px-0.5 text-center">
                         <div className="hidden print:block text-xs text-black font-semibold">
                           {isActive ? (attendance.weekend.presencial[week as keyof AttendanceRow] || "—") : "—"}
                         </div>
@@ -574,7 +574,7 @@ export function AttendanceView() {
                           disabled={!isActive}
                           value={isActive ? attendance.weekend.presencial[week as keyof AttendanceRow] : ""}
                           onChange={(e) => handleInputChange('weekend', 'presencial', week as keyof AttendanceRow, e.target.value)}
-                          className={`print:hidden mx-auto h-9 w-20 text-center bg-[#1E293B]/10 border text-xs font-bold text-white rounded-lg focus:outline-none transition-all ${
+                          className={`print:hidden mx-auto h-9 w-14 text-center bg-[#1E293B]/10 border text-xs text-white rounded-lg focus:outline-none transition-all ${
                             isActive 
                               ? 'border-[#1E293B]/50 hover:border-[#1E293B] focus:border-[#0EA5E9]' 
                               : 'border-transparent opacity-30 cursor-not-allowed placeholder-[#64748B]'
@@ -584,17 +584,17 @@ export function AttendanceView() {
                       </td>
                     );
                   })}
-                  <td className="text-xs font-black text-center text-white py-4 px-2 print:text-black">{wePresStats.total}</td>
-                  <td className="text-xs font-black text-center text-white py-4 px-2 print:text-black">{wePresStats.average}</td>
+                  <td className="text-xs text-center text-white py-3 px-0.5 print:text-black">{wePresStats.total}</td>
+                  <td className="text-xs text-center text-white py-3 px-0.5 print:text-black">{wePresStats.average}</td>
                 </tr>
 
                 {/* Conectados */}
                 <tr className="hover:bg-[#1E293B]/10 transition-colors">
-                  <td className="text-xs font-bold text-[#94A3B8] py-4 px-2 print:text-black">Conectados</td>
+                  <td className="text-xs font-bold text-[#94A3B8] py-3 px-0.5 print:text-black">Conectados</td>
                   {['w1', 'w2', 'w3', 'w4', 'w5'].map((week, idx) => {
                     const isActive = idx < weekendDates.length;
                     return (
-                      <td key={week} className="py-2 px-2 text-center">
+                      <td key={week} className="py-2 px-0.5 text-center">
                         <div className="hidden print:block text-xs text-black font-semibold">
                           {isActive ? (attendance.weekend.conectados[week as keyof AttendanceRow] || "—") : "—"}
                         </div>
@@ -603,7 +603,7 @@ export function AttendanceView() {
                           disabled={!isActive}
                           value={isActive ? attendance.weekend.conectados[week as keyof AttendanceRow] : ""}
                           onChange={(e) => handleInputChange('weekend', 'conectados', week as keyof AttendanceRow, e.target.value)}
-                          className={`print:hidden mx-auto h-9 w-20 text-center bg-[#1E293B]/10 border text-xs font-bold text-white rounded-lg focus:outline-none transition-all ${
+                          className={`print:hidden mx-auto h-9 w-14 text-center bg-[#1E293B]/10 border text-xs text-white rounded-lg focus:outline-none transition-all ${
                             isActive 
                               ? 'border-[#1E293B]/50 hover:border-[#1E293B] focus:border-[#0EA5E9]' 
                               : 'border-transparent opacity-30 cursor-not-allowed placeholder-[#64748B]'
@@ -613,30 +613,30 @@ export function AttendanceView() {
                       </td>
                     );
                   })}
-                  <td className="text-xs font-black text-center text-white py-4 px-2 print:text-black">{weConStats.total}</td>
-                  <td className="text-xs font-black text-center text-white py-4 px-2 print:text-black">{weConStats.average}</td>
+                  <td className="text-xs text-center text-white py-3 px-0.5 print:text-black">{weConStats.total}</td>
+                  <td className="text-xs text-center text-white py-3 px-0.5 print:text-black">{weConStats.average}</td>
                 </tr>
 
                 {/* Total Row */}
                 <tr className="bg-[#1E293B]/10">
-                  <td className="text-xs font-black text-white py-4 px-2 print:text-black">Total</td>
-                  <td className="text-xs font-black text-center text-[#EF4444] py-4 px-2 print:text-black">
+                  <td className="text-xs text-white py-3 px-0.5 print:text-black">Total</td>
+                  <td className="text-xs text-center text-[#34D399] py-3 px-0.5 print:text-black">
                     {weekendDates.length >= 1 ? weTotalW1 : "—"}
                   </td>
-                  <td className="text-xs font-black text-center text-[#EF4444] py-4 px-2 print:text-black">
+                  <td className="text-xs text-center text-[#34D399] py-3 px-0.5 print:text-black">
                     {weekendDates.length >= 2 ? weTotalW2 : "—"}
                   </td>
-                  <td className="text-xs font-black text-center text-[#EF4444] py-4 px-2 print:text-black">
+                  <td className="text-xs text-center text-[#34D399] py-3 px-0.5 print:text-black">
                     {weekendDates.length >= 3 ? weTotalW3 : "—"}
                   </td>
-                  <td className="text-xs font-black text-center text-[#EF4444] py-4 px-2 print:text-black">
+                  <td className="text-xs text-center text-[#34D399] py-3 px-0.5 print:text-black">
                     {weekendDates.length >= 4 ? weTotalW4 : "—"}
                   </td>
-                  <td className="text-xs font-black text-center text-[#EF4444] py-4 px-2 print:text-black">
+                  <td className="text-xs text-center text-[#34D399] py-3 px-0.5 print:text-black">
                     {weekendDates.length >= 5 ? weTotalW5 : "—"}
                   </td>
-                  <td className="text-xs font-black text-center text-[#EF4444] py-4 px-2 print:text-black">{weGrandTotal}</td>
-                  <td className="text-xs font-black text-center text-[#EF4444] py-4 px-2 print:text-black">{weGrandAverage}</td>
+                  <td className="text-xs text-center text-[#34D399] py-3 px-0.5 print:text-black">{weGrandTotal}</td>
+                  <td className="text-xs text-center text-[#34D399] py-3 px-0.5 print:text-black">{weGrandAverage}</td>
                 </tr>
               </tbody>
             </table>

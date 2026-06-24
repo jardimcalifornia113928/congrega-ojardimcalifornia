@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Users,
   FileText,
@@ -16,7 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/components/auth-provider';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, doc, getDoc, getDocs, setDoc, updateDoc, where } from 'firebase/firestore';
 import { toast } from 'sonner';
 
 interface DashboardProps {
@@ -53,6 +53,10 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     auxPioneerReports: 0, auxPioneerHours: 0, auxPioneerStudies: 0,
   });
   const [avgAttendance, setAvgAttendance] = useState<number | null>(null);
+  const [selectedMonthId, setSelectedMonthId] = useState<string>('');
+  const [closedMonths, setClosedMonths] = useState<string[]>([]);
+  const [isClosingMonth, setIsClosingMonth] = useState(false);
+  const hasAutoAdvanced = useRef(false);
 
   const MONTHS = [
     "janeiro", "fevereiro", "março", "abril", "maio", "junho",
@@ -66,12 +70,18 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   const serviceYear = `${serviceStartYear}/${serviceStartYear + 1}`;
 
   useEffect(() => {
+    if (currentDocId && !selectedMonthId) {
+      setSelectedMonthId(currentDocId);
+    }
+  }, [currentDocId, selectedMonthId]);
+
+  useEffect(() => {
     if (!user) return;
 
     const unsubPubs = onSnapshot(
       query(collection(db, 'publishers')),
-      (snapshot) => {
-        const pubs = snapshot.docs.map(d => ({
+      (snapshot: any) => {
+        const pubs = snapshot.docs.map((d: any) => ({
           id: d.id,
           firstName: d.data().firstName || '',
           lastName: d.data().lastName || '',
@@ -80,7 +90,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           pioneerType: d.data().pioneerType || 'nao',
           phone: d.data().phone || '',
           designations: d.data().designations || [],
-        })).sort((a, b) => (a.firstName || '').localeCompare(b.firstName || ''));
+        })).sort((a: any, b: any) => (a.firstName || '').localeCompare(b.firstName || ''));
         setPublishers(pubs);
 
         const active = pubs.filter(p => p.status === 'ativo');
@@ -95,8 +105,8 @@ export function Dashboard({ onNavigate }: DashboardProps) {
 
     const unsubGroups = onSnapshot(
       query(collection(db, 'groups')),
-      (snapshot) => {
-        const gs = snapshot.docs.map(d => ({ id: d.id, name: d.data().name || '' }));
+      (snapshot: any) => {
+        const gs = snapshot.docs.map((d: any) => ({ id: d.id, name: d.data().name || '' }));
         setGroups(gs);
       }
     );
@@ -105,11 +115,20 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   }, [user]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !selectedMonthId) return;
+    let active = true;
+
+    // Reset data immediately when month changes
+    setMissingReports(new Set());
+    setAvgAttendance(null);
+    setStatsCount({ active: 0, totalStudies: 0, totalHours: 0 });
+    setReportStats({ whoReported: 0, whoReported6Months: 0, pubStudies: 0, regPioneerReports: 0, regPioneerHours: 0, regPioneerStudies: 0, auxPioneerReports: 0, auxPioneerHours: 0, auxPioneerStudies: 0 });
+
     const fetchCurrentReport = async () => {
       try {
-        const docRef = doc(db, 'field_reports', currentDocId);
+        const docRef = doc(db, 'field_reports', selectedMonthId);
         const docSnap = await getDoc(docRef);
+        if (!active) return;
         const reports: Record<string, any> = docSnap.exists() ? (docSnap.data().reports || {}) : {};
 
         const activePubs = publishers.filter(p => p.status === 'ativo');
@@ -144,10 +163,12 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           }
         }
 
+        if (!active) return;
         setMissingReports(missing);
         setStatsCount({ active: activePubs.length, totalHours, totalStudies });
         setReportStats({ whoReported, whoReported6Months: 0, pubStudies, regPioneerReports, regPioneerHours, regPioneerStudies, auxPioneerReports, auxPioneerHours, auxPioneerStudies });
       } catch (error) {
+        if (!active) return;
         console.error("Error fetching current report:", error);
       }
     };
@@ -162,6 +183,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           const d = new Date(prevMonth.getFullYear(), prevMonth.getMonth() - i, 1);
           const docId = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
           const snap = await getDoc(doc(db, 'field_reports', docId));
+          if (!active) return;
           if (snap.exists()) {
             const reps = snap.data().reports || {};
             for (const pid of Object.keys(reps)) {
@@ -169,8 +191,10 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             }
           }
         }
+        if (!active) return;
         setReportStats(prev => ({ ...prev, whoReported6Months: reportedIds.size }));
       } catch (e) {
+        if (!active) return;
         console.error("Error fetching 6 months:", e);
       }
     };
@@ -179,26 +203,104 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     // Fetch weekend attendance
     const fetchAttendance = async () => {
       try {
-        const attDoc = doc(db, 'attendance', currentDocId);
+        const attDoc = doc(db, 'attendance', selectedMonthId);
         const attSnap = await getDoc(attDoc);
+        if (!active) return;
         if (attSnap.exists()) {
           const data = attSnap.data();
-          const weekendCounts: number[] = [];
-          for (const [key, val] of Object.entries(data)) {
-            if (key.startsWith('weekend_') && typeof val === 'number') {
-              weekendCounts.push(val);
+          const weekendDay = data.weekendDay !== undefined ? data.weekendDay : 6;
+          const presencial = data.weekend?.presencial || {};
+          const conectados = data.weekend?.conectados || {};
+
+          const getDaysInMonth = (year: number, month: number, targetDayOfWeek: number): string[] => {
+            const dates: string[] = [];
+            const date = new Date(year, month, 1);
+            while (date.getMonth() === month) {
+              if (date.getDay() === targetDayOfWeek) {
+                dates.push(`${date.getDate()}/${month}`);
+              }
+              date.setDate(date.getDate() + 1);
             }
+            return dates;
+          };
+
+          const [year, month] = selectedMonthId.split('-').map(Number);
+          const activeWeeks = getDaysInMonth(year, month - 1, weekendDay).length;
+          const weekKeys = ['w1', 'w2', 'w3', 'w4', 'w5'];
+          let total = 0;
+
+          for (let i = 0; i < activeWeeks; i++) {
+            const w = weekKeys[i];
+            const p = parseInt(presencial[w]) || 0;
+            const c = parseInt(conectados[w]) || 0;
+            total += p + c;
           }
-          if (weekendCounts.length > 0) {
-            setAvgAttendance(Math.round(weekendCounts.reduce((a, b) => a + b, 0) / weekendCounts.length));
+
+          if (!active) return;
+          if (activeWeeks > 0) {
+            setAvgAttendance(Math.round(total / activeWeeks));
           }
         }
       } catch (e) {
+        if (!active) return;
         console.error("Error fetching attendance:", e);
       }
     };
     fetchAttendance();
-  }, [user, currentDocId, publishers]);
+
+    return () => { active = false; };
+  }, [user, selectedMonthId, publishers]);
+
+  // Fetch closed months list
+  useEffect(() => {
+    if (!user) return;
+    const fetchClosed = async () => {
+      try {
+        const q = query(collection(db, 'field_reports'), where('closed', '==', true));
+        const snap = await getDocs(q);
+        const ids = snap.docs.map(d => d.id).sort();
+        setClosedMonths(ids);
+        // Auto-avança apenas uma vez na carga inicial se o mês padrão já estiver fechado
+        if (!hasAutoAdvanced.current && selectedMonthId === currentDocId && ids.includes(selectedMonthId)) {
+          hasAutoAdvanced.current = true;
+          setSelectedMonthId(getNextMonthId(selectedMonthId));
+        }
+      } catch (e) {
+        console.error("Error fetching closed months:", e);
+      }
+    };
+    fetchClosed();
+  }, [user, selectedMonthId]);
+
+  const getMonthLabel = (docId: string) => {
+    const [y, m] = docId.split('-').map(Number);
+    return `${MONTHS[m - 1]}/${y}`;
+  };
+
+  const getNextMonthId = (docId: string) => {
+    const [y, m] = docId.split('-').map(Number);
+    const next = new Date(y, m - 1, 1);
+    next.setMonth(next.getMonth() + 1);
+    return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
+  };
+
+  const handleCloseMonth = async () => {
+    if (!user || !selectedMonthId || isClosingMonth) return;
+    setIsClosingMonth(true);
+    try {
+      const docRef = doc(db, 'field_reports', selectedMonthId);
+      await setDoc(docRef, { closed: true }, { merge: true });
+      // Avança para o próximo mês
+      const nextMonth = getNextMonthId(selectedMonthId);
+      setSelectedMonthId(nextMonth);
+      toast.success(`Mês ${getMonthLabel(selectedMonthId)} fechado com sucesso!`);
+    } catch (e) {
+      console.error("Error closing month:", e);
+      toast.error("Erro ao fechar mês.");
+    } finally {
+      setIsClosingMonth(false);
+    }
+  };
 
   const activePublishers = publishers.filter(p => p.status === 'ativo');
   const ungroupedIds = groups.map(g => g.id);
@@ -213,16 +315,17 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     if (!user) return;
     setCheckingIn(prev => new Set(prev).add(publisherId));
     try {
-      const docRef = doc(db, 'field_reports', currentDocId);
+      const docRef = doc(db, 'field_reports', selectedMonthId);
       const docSnap = await getDoc(docRef);
       const existingData = docSnap.exists() ? docSnap.data() : {};
       const reports = existingData.reports || {};
       reports[publisherId] = { participou: true, estudos: '', auxiliar: false, horas: '', observacao: '' };
+      const [y, m] = selectedMonthId.split('-').map(Number);
       await setDoc(docRef, {
         ...existingData,
         reports,
-        month: prevMonth.getMonth(),
-        year: prevMonth.getFullYear(),
+        month: m - 1,
+        year: y,
         updatedAt: new Date().toISOString(),
       }, { merge: true });
       setMissingReports(prev => {
@@ -246,7 +349,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
         return next;
       });
     }
-  }, [user, currentDocId, publishers, prevMonth]);
+  }, [user, selectedMonthId, publishers, prevMonth]);
 
   return (
     <div className="space-y-8">
@@ -255,57 +358,74 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           <h1 className="text-xl font-semibold text-white tracking-tight">Dashboard</h1>
           <p className="text-[13px] text-[#94A3B8] mt-0.5">Congregação Jardim Califórnia — Visão Geral</p>
         </div>
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={() => onNavigate('settings')} className="h-9 border-[#1E293B] text-[#94A3B8] hover:text-white hover:bg-[#1E293B]/50 font-medium rounded-lg text-[12px] px-4">
-            Baixar Backup
-          </Button>
-          <Button onClick={() => onNavigate('prints')} className="h-9 bg-[#0EA5E9] hover:bg-[#0EA5E9]/90 text-white font-medium rounded-lg shadow-lg shadow-[#0EA5E9]/20 text-[12px] px-4">
-            Gerar S-1
-          </Button>
-        </div>
       </div>
 
       <Card className="bg-[#0F172A] border border-[#1E293B] rounded-2xl overflow-hidden">
-        <CardHeader className="border-b border-[#1E293B] px-5 py-4">
-          <CardTitle className="text-[13px] font-semibold text-white">Relatório Mensal — {currentMonthLabel}</CardTitle>
+        <CardHeader className="border-b border-[#1E293B] px-5 py-4 flex flex-row items-center justify-between">
+          <CardTitle className="text-[13px] font-semibold text-white">Relatório Mensal — {selectedMonthId ? getMonthLabel(selectedMonthId) : currentMonthLabel}</CardTitle>
+          <div className="flex gap-2">
+            <select
+              value={selectedMonthId}
+              onChange={(e) => setSelectedMonthId(e.target.value)}
+              className="h-8 px-3 text-[11px] bg-[#1E293B] border border-[#334155] text-[#94A3B8] rounded-lg focus:outline-none focus:border-[#0EA5E9]"
+            >
+              <option value={selectedMonthId}>{getMonthLabel(selectedMonthId)}{closedMonths.includes(selectedMonthId) ? ' (fechado)' : ''}</option>
+              {[...new Set([...closedMonths, currentDocId])].filter(id => id !== selectedMonthId).map(id => (
+                <option key={id} value={id}>{getMonthLabel(id)}{closedMonths.includes(id) ? ' (fechado)' : ''}</option>
+              ))}
+            </select>
+            {!closedMonths.includes(selectedMonthId) && (
+              <Button
+                onClick={handleCloseMonth}
+                disabled={isClosingMonth || !selectedMonthId}
+                className="h-8 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 font-medium rounded-lg text-[11px] px-4"
+              >
+                {isClosingMonth ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  'Fechar Mês'
+                )}
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="p-5">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
             <div className="space-y-1.5 p-3 bg-[#1E293B]/30 rounded-xl">
-              <p className="text-[9px] font-black text-[#64748B] uppercase tracking-wider">Publicadores</p>
+              <p className="text-[12px] font-black text-[#64748B] uppercase tracking-wider">Publicadores</p>
               <p className="text-lg font-bold text-white">{statsCount.active}</p>
-              <p className="text-[10px] text-[#94A3B8]">{reportStats.whoReported6Months} relataram (6 meses)</p>
+              <p className="text-[11.5px] text-[#94A3B8]">{reportStats.whoReported6Months} relataram (6 meses)</p>
             </div>
             <div className="space-y-1.5 p-3 bg-[#1E293B]/30 rounded-xl">
-              <p className="text-[9px] font-black text-[#64748B] uppercase tracking-wider">Média Reunião</p>
+              <p className="text-[12px] font-black text-[#64748B] uppercase tracking-wider">Média Reunião</p>
               <p className="text-lg font-bold text-white">{avgAttendance ?? '—'}</p>
-              <p className="text-[10px] text-[#94A3B8]">Fim de semana</p>
+              <p className="text-[11.5px] text-[#94A3B8]">Fim de semana</p>
             </div>
             <div className="space-y-1.5 p-3 bg-[#1E293B]/30 rounded-xl">
-              <p className="text-[9px] font-black text-[#64748B] uppercase tracking-wider">Publicadores</p>
+              <p className="text-[12px] font-black text-[#64748B] uppercase tracking-wider">Publicadores</p>
               <p className="text-lg font-bold text-white">{reportStats.whoReported}</p>
-              <p className="text-[10px] text-[#94A3B8]">{reportStats.pubStudies} estudos</p>
+              <p className="text-[11.5px] text-[#94A3B8]">{reportStats.pubStudies} estudos</p>
             </div>
             <div className="space-y-1.5 p-3 bg-emerald-500/5 rounded-xl border border-emerald-500/10">
-              <p className="text-[9px] font-black text-emerald-400 uppercase tracking-wider">Pion. Regulares</p>
+              <p className="text-[12px] font-black text-emerald-400 uppercase tracking-wider">Pion. Regulares</p>
               <p className="text-lg font-bold text-white">{reportStats.regPioneerReports}</p>
-              <div className="flex gap-3 text-[10px] text-[#94A3B8]">
+              <div className="flex gap-3 text-[11.5px] text-[#94A3B8]">
                 <span>{reportStats.regPioneerHours}h</span>
                 <span>{reportStats.regPioneerStudies} est.</span>
               </div>
             </div>
             <div className="space-y-1.5 p-3 bg-violet-500/5 rounded-xl border border-violet-500/10">
-              <p className="text-[9px] font-black text-violet-400 uppercase tracking-wider">Pion. Auxiliares</p>
+              <p className="text-[12px] font-black text-violet-400 uppercase tracking-wider">Pion. Auxiliares</p>
               <p className="text-lg font-bold text-white">{reportStats.auxPioneerReports}</p>
-              <div className="flex gap-3 text-[10px] text-[#94A3B8]">
+              <div className="flex gap-3 text-[11.5px] text-[#94A3B8]">
                 <span>{reportStats.auxPioneerHours}h</span>
                 <span>{reportStats.auxPioneerStudies} est.</span>
               </div>
             </div>
             <div className="space-y-1.5 p-3 bg-[#1E293B]/30 rounded-xl">
-              <p className="text-[9px] font-black text-[#64748B] uppercase tracking-wider">Total Horas</p>
+              <p className="text-[12px] font-black text-[#64748B] uppercase tracking-wider">Total Horas</p>
               <p className="text-lg font-bold text-white">{statsCount.totalHours}h</p>
-              <p className="text-[10px] text-[#94A3B8]">Média {(statsCount.active > 0 ? (statsCount.totalHours / statsCount.active).toFixed(1) : '0')}h/pub</p>
+              <p className="text-[11.5px] text-[#94A3B8]">Média {(statsCount.active > 0 ? (statsCount.totalHours / statsCount.active).toFixed(1) : '0')}h/pub</p>
             </div>
           </div>
         </CardContent>
@@ -319,7 +439,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
               </div>
               <div>
                 <CardTitle className="text-[13px] font-semibold text-white">Relatórios de Campo</CardTitle>
-                <p className="text-[11px] text-[#64748B] mt-0.5">{missingReports.size} publicador(es) faltam lançar relatório de {currentMonthLabel}</p>
+                <p className="text-[11px] text-[#64748B] mt-0.5">{missingReports.size} publicador(es) faltam lançar relatório de {selectedMonthId ? getMonthLabel(selectedMonthId) : currentMonthLabel}</p>
               </div>
             </div>
             <Button onClick={() => onNavigate('field')} className="h-8 bg-[#0EA5E9] hover:bg-[#0EA5E9]/90 text-white font-medium rounded-lg text-[11px] px-4">
@@ -347,7 +467,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                     const sup = publishers.find(p => p.groupId === group.id && p.designations?.includes("Serviço de campo::Super. de Grupo"));
                     const supPhone = sup?.phone?.replace(/\D/g, '') || '';
                     const message = encodeURIComponent(
-                      `Olá, segue a lista de publicadores do grupo ${group.name} que ainda não lançaram o relatório de campo de ${currentMonthLabel}:\n\n` +
+                      `Olá, segue a lista de publicadores do grupo ${group.name} que ainda não lançaram o relatório de campo de ${selectedMonthId ? getMonthLabel(selectedMonthId) : currentMonthLabel}:\n\n` +
                       pubs.map(p => `• ${p.firstName} ${p.lastName}`).join('\n') +
                       `\n\nPor favor, nos ajudem a regularizar esses relatórios. Obrigado!`
                     );

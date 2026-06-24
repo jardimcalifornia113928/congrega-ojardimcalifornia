@@ -16,6 +16,7 @@ import {
   Users,
   Loader2
 } from 'lucide-react';
+import { S21PreviewModal } from '@/components/s21-preview-modal';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { phoneMask } from '@/lib/utils';
@@ -260,6 +261,7 @@ export function PublishersView() {
   ];
   const [s21Data, setS21Data] = useState<Record<string, { participou: boolean; estudos: string; auxiliar: boolean; horas: string; observacao: string }>>({});
   const [isS21Loading, setIsS21Loading] = useState(false);
+  const [showS21Preview, setShowS21Preview] = useState(false);
 
   // Fetch S-21 data from field_reports when publisher changes
   React.useEffect(() => {
@@ -735,10 +737,10 @@ export function PublishersView() {
                             Salvar S-21
                           </Button>
                         )}
-                         <Button variant="outline" className="bg-[#0F172A] border-[#0EA5E9]/30 text-[#0EA5E9] hover:bg-[#0EA5E9]/20 h-8 gap-1.5 font-bold px-4 rounded-xl text-[10px] uppercase tracking-widest">
-                          <Printer className="h-3 w-3" />
-                          Imprimir S-21
-                        </Button>
+                         <Button variant="outline" onClick={() => setShowS21Preview(true)} className="bg-[#0F172A] border-[#0EA5E9]/30 text-[#0EA5E9] hover:bg-[#0EA5E9]/20 h-8 gap-1.5 font-bold px-4 rounded-xl text-[10px] uppercase tracking-widest">
+                           <Printer className="h-3 w-3" />
+                           Imprimir S-21
+                         </Button>
                       </div>
                    </div>
 
@@ -867,6 +869,15 @@ export function PublishersView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {showS21Preview && (
+        <S21PreviewModal
+          publisher={publisherData}
+          s21Data={s21Data}
+          serviceYear={serviceYear}
+          onClose={() => setShowS21Preview(false)}
+        />
+      )}
     </div>
   );
 }

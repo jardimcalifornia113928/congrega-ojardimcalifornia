@@ -11,14 +11,17 @@ import {
   BookOpen,
   Users,
   Wrench,
-  Printer
+  Eye,
+  Upload,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/components/auth-provider';
 import { handleFirestoreError, OperationType } from '@/lib/firebase-utils';
-import { collection, doc, onSnapshot, setDoc, query } from 'firebase/firestore';
+import { collection, doc, getDoc, onSnapshot, setDoc, query, getDocs } from 'firebase/firestore';
 import { toast } from 'sonner';
+import { MeetingPreviewModal, MidweekPreviewData, WeekendPreviewData } from '@/components/meeting-preview-modal';
+import { SchoolPreviewModal } from '@/components/school-preview-modal';
 
 // ==========================================
 // AUTOCOMPLETE INPUT COMPONENT FOR PUBLISHERS
@@ -301,6 +304,14 @@ export function MidweekView() {
   const [meetingData, setMeetingData] = useState<MidweekMeetingData>(defaultMeetingData);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [midweekPreview, setMidweekPreview] = useState<MidweekPreviewData | null>(null);
+  const [weekendPreview, setWeekendPreview] = useState<WeekendPreviewData | null>(null);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [savedWeeks, setSavedWeeks] = useState<string[]>([]);
+  const [showSchool, setShowSchool] = useState(false);
+  const [schoolCards, setSchoolCards] = useState<any[]>([]);
+  const [isSchoolLoading, setIsSchoolLoading] = useState(false);
 
   // Get Monday Date String for document ID (format: YYYY-MM-DD)
   const getMondayStr = (date: Date): string => {
@@ -389,6 +400,17 @@ export function MidweekView() {
     return () => unsubscribe();
   }, [user, mondayStr]);
 
+  // Load saved weeks list
+  useEffect(() => {
+    if (!user) return;
+    const q = query(collection(db, 'midweek_meetings'));
+    const unsubscribe = onSnapshot(q, (snap) => {
+      const weeks = snap.docs.map(d => d.id).sort().reverse();
+      setSavedWeeks(weeks);
+    });
+    return () => unsubscribe();
+  }, [user]);
+
   // Save Midweek Meeting Data
   const handleSave = async () => {
     if (!user) return;
@@ -411,160 +433,100 @@ export function MidweekView() {
     }
   };
 
-  const contentRef = useRef<HTMLDivElement>(null);
-
-  const handleExportPdf = async () => {
+  const loadPreview = async () => {
+    if (!user) return;
+    setIsPreviewLoading(true);
     try {
-      const toastId = toast.loading("Gerando PDF...");
-      const jsPDF = (await import('jspdf')).default;
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const margin = 15;
-      let y = 20;
+      const mondayStr = getMondayStr(selectedDate);
+      const [wendSnap] = await Promise.all([
+        getDoc(doc(db, 'weekend_meetings', mondayStr)),
+      ]);
 
-      const title = (txt: string) => {
-        pdf.setFontSize(14);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(txt, margin, y);
-        y += 7;
-      };
-      const field = (label: string, value: string) => {
-        pdf.setFontSize(10);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(label + ': ', margin, y);
-        const lw = pdf.getTextWidth(label + ': ');
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(value || '(não informado)', margin + lw, y);
-        y += 5;
-      };
-      const checkPage = () => {
-        if (y > 270) {
-          pdf.addPage();
-          y = 20;
-        }
-      };
+      const f = (v?: string) => v || '';
 
-      pdf.setFontSize(18);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Reunião de Meio de Semana', margin, y);
-      y += 6;
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(formatWeekRange(selectedDate), margin, y);
-      y += 10;
-
-      title('Tesouros da Palavra de Deus');
-      field('Presidente', meetingData.president);
-      field('Oração inicial', meetingData.openingPrayer);
-      field('Discurso', meetingData.talkSpeaker);
-      field('Tema', meetingData.talkTheme);
-      field('Joias Espirituais', meetingData.gemsSpeaker);
-      field('Leitura da Bíblia', meetingData.bibleReadingReader);
-      field('Oração final', meetingData.closingPrayer);
-      checkPage();
-
-      title('Parte 1');
-      field('Tema', meetingData.part1Theme);
-      field('Orador', meetingData.part1Speaker);
-      field('Ajudante', meetingData.part1Assistant);
-      field('2º Ajudante', meetingData.part1SecondHelper);
-      checkPage();
-
-      title('Parte 2');
-      field('Tema', meetingData.part2Theme);
-      field('Orador', meetingData.part2Speaker);
-      field('Ajudante', meetingData.part2Assistant);
-      field('2º Ajudante', meetingData.part2SecondHelper);
-      checkPage();
-
-      title('Parte 3');
-      field('Tema', meetingData.part3Theme);
-      field('Orador', meetingData.part3Speaker);
-      field('Ajudante', meetingData.part3Assistant);
-      field('2º Ajudante', meetingData.part3SecondHelper);
-      checkPage();
-
-      title('Parte 4');
-      field('Tema', meetingData.part4Theme);
-      field('Orador', meetingData.part4Speaker);
-      field('Ajudante', meetingData.part4Assistant);
-      field('2º Ajudante', meetingData.part4SecondHelper);
-      checkPage();
-
-      title('Nossa Vida Cristã');
-      field('Parte 1', meetingData.lifePart1Theme);
-      field('Orador', meetingData.lifePart1Speaker);
-      field('Parte 2', meetingData.lifePart2Theme);
-      field('Orador', meetingData.lifePart2Speaker);
-      field('Parte 3', meetingData.lifePart3Theme);
-      field('Orador', meetingData.lifePart3Speaker);
-      checkPage();
-
-      title('Estudo Bíblico de Congregação');
-      field('Condutor', meetingData.cbsConductor);
-      field('Leitor', meetingData.cbsReader);
-      checkPage();
-
-      title('Designações Mecânicas');
-      field('Indicador 1', meetingData.mechanicalIndicador1);
-      field('Indicador 2', meetingData.mechanicalIndicador2);
-      field('Microfone 1', meetingData.mechanicalMicrofone1);
-      field('Microfone 2', meetingData.mechanicalMicrofone2);
-      field('Palco', meetingData.mechanicalPalco);
-      field('Áudio/Vídeo', meetingData.mechanicalAudioVideo);
-
-      pdf.save('programacao-meio-semana.pdf');
-      toast.dismiss(toastId);
-      toast.success("PDF baixado com sucesso!");
-    } catch (error) {
-      console.error('Erro ao gerar PDF:', error);
-      toast.error('Falha ao gerar PDF');
-    }
-  };
-
-  const printRef = useRef<HTMLDivElement>(null);
-
-  const handlePrint = async () => {
-    try {
-      const toastId = toast.loading("Gerando PDF...");
-      const html2canvas = (await import('html2canvas')).default;
-      const jsPDF = (await import('jspdf')).default;
-
-      const el = printRef.current;
-      if (!el) {
-        toast.error("Erro ao gerar PDF");
-        return;
-      }
-
-      el.style.display = 'block';
-      await new Promise(r => setTimeout(r, 100));
-
-      const canvas = await html2canvas(el, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        width: el.scrollWidth,
-        height: el.scrollHeight,
+      setMidweekPreview({
+        weekRange: formatWeekRange(selectedDate),
+        president: f(meetingData.president),
+        openingPrayer: f(meetingData.openingPrayer),
+        closingPrayer: f(meetingData.closingPrayer),
+        talkSpeaker: f(meetingData.talkSpeaker),
+        talkTheme: f(meetingData.talkTheme),
+        gemsSpeaker: f(meetingData.gemsSpeaker),
+        bibleReadingReader: f(meetingData.bibleReadingReader),
+        part1Theme: f(meetingData.part1Theme), part1Speaker: f(meetingData.part1Speaker),
+        part1Assistant: f(meetingData.part1Assistant), part1SecondHelper: f(meetingData.part1SecondHelper),
+        part2Theme: f(meetingData.part2Theme), part2Speaker: f(meetingData.part2Speaker),
+        part2Assistant: f(meetingData.part2Assistant), part2SecondHelper: f(meetingData.part2SecondHelper),
+        part3Theme: f(meetingData.part3Theme), part3Speaker: f(meetingData.part3Speaker),
+        part3Assistant: f(meetingData.part3Assistant), part3SecondHelper: f(meetingData.part3SecondHelper),
+        part4Theme: f(meetingData.part4Theme), part4Speaker: f(meetingData.part4Speaker),
+        part4Assistant: f(meetingData.part4Assistant), part4SecondHelper: f(meetingData.part4SecondHelper),
+        lifePart1Theme: f(meetingData.lifePart1Theme), lifePart1Speaker: f(meetingData.lifePart1Speaker),
+        lifePart2Theme: f(meetingData.lifePart2Theme), lifePart2Speaker: f(meetingData.lifePart2Speaker),
+        lifePart3Theme: f(meetingData.lifePart3Theme), lifePart3Speaker: f(meetingData.lifePart3Speaker),
+        cbsConductor: f(meetingData.cbsConductor), cbsReader: f(meetingData.cbsReader),
+        mechanicalIndicador1: f(meetingData.mechanicalIndicador1),
+        mechanicalIndicador2: f(meetingData.mechanicalIndicador2),
+        mechanicalMicrofone1: f(meetingData.mechanicalMicrofone1),
+        mechanicalMicrofone2: f(meetingData.mechanicalMicrofone2),
+        mechanicalPalco: f(meetingData.mechanicalPalco),
+        mechanicalAudioVideo: f(meetingData.mechanicalAudioVideo),
       });
 
-      el.style.display = 'none';
+      const wData = wendSnap.data() || {};
+      setWeekendPreview({
+        president: f((wData as any).president),
+        openingPrayer: f((wData as any).openingPrayer),
+        closingPrayer: f((wData as any).closingPrayer),
+        localSpeaker: f((wData as any).localSpeaker),
+        visitingSpeaker: f((wData as any).visitingSpeaker),
+        talkTheme: f((wData as any).talkTheme),
+        watchtowerConductor: f((wData as any).watchtowerConductor),
+        watchtowerReader: f((wData as any).watchtowerReader),
+        mechanicalIndicador1: f((wData as any).mechanicalIndicador1),
+        mechanicalIndicador2: f((wData as any).mechanicalIndicador2),
+        mechanicalMicrofone1: f((wData as any).mechanicalMicrofone1),
+        mechanicalMicrofone2: f((wData as any).mechanicalMicrofone2),
+        mechanicalPalco: f((wData as any).mechanicalPalco),
+        mechanicalAudioVideo: f((wData as any).mechanicalAudioVideo),
+      });
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const pdfW = 210;
-      const pdfH = 297;
-      const imgW = canvas.width;
-      const imgH = canvas.height;
-      const ratio = Math.min(pdfW / imgW, pdfH / imgH);
-      pdf.addImage(imgData, 'JPEG', 0, 0, imgW * ratio, imgH * ratio);
-      pdf.save(`programacao-${formatWeekRange(selectedDate).replace(/\s/g, '-').toLowerCase()}.pdf`);
-
-      toast.dismiss(toastId);
-      toast.success("PDF baixado com sucesso!");
+      setShowPreview(true);
     } catch (error) {
-      console.error('Erro ao imprimir:', error);
-      toast.error('Falha ao gerar PDF');
+      console.error("Error loading preview:", error);
+      toast.error("Erro ao carregar dados para visualização.");
+    } finally {
+      setIsPreviewLoading(false);
     }
   };
+
+  const loadSchool = () => {
+    const weekData = formatWeekRange(selectedDate);
+    const cards: any[] = [];
+    const f = (v?: string) => v || '';
+
+    if (f(meetingData.bibleReadingReader)) {
+      cards.push({ nome: f(meetingData.bibleReadingReader), ajudante: '', data: weekData, numeroParte: '', salaoPrincipal: '', salaB: '', salaC: '' });
+    }
+    if (f(meetingData.part1Speaker)) {
+      cards.push({ nome: f(meetingData.part1Speaker), ajudante: [f(meetingData.part1Assistant), f(meetingData.part1SecondHelper)].filter(Boolean).join(' / '), data: weekData, numeroParte: f(meetingData.part1Theme), salaoPrincipal: '', salaB: '', salaC: '' });
+    }
+    if (f(meetingData.part2Speaker)) {
+      cards.push({ nome: f(meetingData.part2Speaker), ajudante: [f(meetingData.part2Assistant), f(meetingData.part2SecondHelper)].filter(Boolean).join(' / '), data: weekData, numeroParte: f(meetingData.part2Theme), salaoPrincipal: '', salaB: '', salaC: '' });
+    }
+    if (f(meetingData.part3Speaker)) {
+      cards.push({ nome: f(meetingData.part3Speaker), ajudante: [f(meetingData.part3Assistant), f(meetingData.part3SecondHelper)].filter(Boolean).join(' / '), data: weekData, numeroParte: f(meetingData.part3Theme), salaoPrincipal: '', salaB: '', salaC: '' });
+    }
+    if (f(meetingData.part4Speaker)) {
+      cards.push({ nome: f(meetingData.part4Speaker), ajudante: [f(meetingData.part4Assistant), f(meetingData.part4SecondHelper)].filter(Boolean).join(' / '), data: weekData, numeroParte: f(meetingData.part4Theme), salaoPrincipal: '', salaB: '', salaC: '' });
+    }
+
+    if (cards.length === 0) { toast.error('Nenhuma designação preenchida.'); return; }
+    setSchoolCards(cards);
+    setShowSchool(true);
+  };
+
+  const contentRef = useRef<HTMLDivElement>(null);
 
   const updateField = (key: keyof MidweekMeetingData, value: any) => {
     setMeetingData(prev => ({
@@ -610,6 +572,11 @@ export function MidweekView() {
                 <ChevronRight className="h-4 w-4" />
               </Button>
 
+              {/* Saved indicator */}
+              <span className={`text-[10px] font-bold px-2 py-1 rounded-md ${savedWeeks.includes(mondayStr) ? 'bg-emerald-500/20 text-emerald-400' : 'bg-yellow-500/10 text-yellow-500'}`}>
+                {savedWeeks.includes(mondayStr) ? 'Salvo' : 'Não salvo'}
+              </span>
+
               {/* Seletor de data disfarçado */}
               <div className="relative overflow-hidden">
                 <input
@@ -629,24 +596,45 @@ export function MidweekView() {
                   Buscar Data
                 </Button>
               </div>
+
+              {/* Saved weeks dropdown */}
+              {savedWeeks.length > 0 && (
+                <select
+                  value=""
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      const parts = e.target.value.split('-');
+                      setSelectedDate(new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])));
+                    }
+                  }}
+                  className="bg-[#1E293B]/40 border border-[#1E293B]/50 text-white text-xs rounded-lg px-2 py-1.5 h-8 focus:outline-none focus:border-[#0EA5E9] cursor-pointer"
+                >
+                  <option value="">Semanas salvas</option>
+                  {savedWeeks.map(w => (
+                    <option key={w} value={w}>{w}</option>
+                  ))}
+                </select>
+              )}
             </div>
           </div>
 
           <div className="flex gap-3">
             <Button
-              onClick={handlePrint}
+              onClick={loadSchool}
               variant="outline"
               className="h-10 border-[#1E293B] text-[#94A3B8] font-bold rounded-xl gap-2 px-5 text-xs"
             >
-              <Printer className="h-4 w-4" />
-              Imprimir
+              <BookOpen className="h-4 w-4" />
+              Visualizar Escola
             </Button>
             <Button
-              onClick={handleExportPdf}
+              onClick={loadPreview}
+              disabled={isPreviewLoading}
               variant="outline"
               className="h-10 border-[#1E293B] text-[#94A3B8] font-bold rounded-xl gap-2 px-5 text-xs"
             >
-              Exportar PDF
+              {isPreviewLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
+              Visualizar
             </Button>
             <Button
               onClick={handleSave}
@@ -1135,82 +1123,20 @@ export function MidweekView() {
         </div>
       </div>
 
-      <div ref={printRef} style={{ display: 'none', width: '210mm', padding: '8mm', fontFamily: 'Helvetica, Arial, sans-serif', background: 'white', color: 'black' }}>
-        <style>{`
-          @page { size: A4; margin: 0; }
-          .pl { width: 194mm; margin: 0 auto; font-size: 7pt; line-height: 1.3; color: #000; }
-          .pl h1 { font-size: 14pt; font-weight: bold; text-align: center; margin: 0 0 2mm; }
-          .pl .sub { font-size: 7pt; color: #555; text-align: center; margin-bottom: 2mm; }
-          .pl .week { font-size: 9pt; font-weight: bold; text-align: right; margin-bottom: 3mm; }
-          .pl .row { display: flex; justify-content: space-between; padding: 1mm 0; border-bottom: 0.3pt solid #ddd; }
-          .pl .row span:first-child { font-weight: bold; color: #333; }
-          .pl .row span:last-child { font-weight: bold; color: #555; text-align: right; }
-          .pl .section { background: #b4780a; color: white; font-weight: bold; font-size: 8pt; padding: 1.5mm 2mm; margin-top: 2mm; text-transform: uppercase; }
-          .pl .section.orange { background: #c85a0a; }
-          .pl .section.rose { background: #b41e32; }
-          .pl .section.teal { background: #006e5a; }
-          .pl .section.gray { background: #e6e6e6; color: #333; }
-          .pl .mech { background: #e6e6e6; color: #333; font-weight: bold; font-size: 7.5pt; padding: 1mm 2mm; margin-top: 2mm; }
-          .pl .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 2mm; }
-          .pl .field { display: flex; gap: 1mm; align-items: baseline; }
-          .pl .field .lbl { font-weight: bold; color: #555; font-size: 7pt; white-space: nowrap; }
-          .pl .field .val { font-weight: normal; color: #000; border-bottom: 0.3pt solid #ccc; flex: 1; min-height: 3mm; }
-          .pl .cbs { display: flex; gap: 4mm; align-items: baseline; margin-top: 1mm; }
-          .pl .cbs .lbl { font-weight: bold; color: #555; font-size: 7pt; }
-          .pl .cbs .val { font-weight: normal; color: #000; border-bottom: 0.3pt solid #ccc; min-width: 30mm; }
-          .pl hr.divider { border: none; border-top: 0.8pt solid #000; margin: 3mm 0; }
-          .pl .border { border: 0.5pt solid #000; padding: 2mm; }
-        `}</style>
-        <div className="pl">
-          <h1>NOSSA VIDA E MINISTÉRIO CRISTÃO</h1>
-          <div className="sub">DESIGNAÇÕES DA REUNIÃO — CONGREGAÇÃO JARDIM CALIFÓRNIA - 113928</div>
-          <div className="week">{formatWeekRange(selectedDate).toUpperCase()}  |</div>
+      {showPreview && midweekPreview && weekendPreview && (
+        <MeetingPreviewModal
+          midweek={midweekPreview}
+          weekend={weekendPreview}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
 
-          <div style={{ display: 'flex', gap: '2mm', marginBottom: '1mm' }}>
-            <div className="field" style={{ flex: 1 }}><span className="lbl">/ PRESIDENTE-</span><span className="val">{meetingData.president || 'DESIGNADO AQUI'}</span></div>
-            <div className="field" style={{ flex: 1 }}><span className="lbl">/ ORAÇÃO INICIAL-</span><span className="val">{meetingData.openingPrayer || 'DESIGNADO AQUI'}</span></div>
-            <div className="field" style={{ flex: 1 }}><span className="lbl">/ ORAÇÃO FINAL-</span><span className="val">{meetingData.closingPrayer || 'DESIGNADO AQUI'}</span></div>
-          </div>
-
-          <div className="section">✦ Tesouros da Palavra de Deus</div>
-          <div className="row"><span>1- {meetingData.talkTheme || 'TESOUROS DA PALAVRA'}</span><span>{meetingData.talkSpeaker || 'DESIGNADO AQUI'}</span></div>
-          <div className="row"><span>2- Joias Espirituais</span><span>{meetingData.gemsSpeaker || 'DESIGNADO AQUI'}</span></div>
-          <div className="row"><span>3- Leitura da Bíblia</span><span>{meetingData.bibleReadingReader || 'DESIGNADO AQUI'}</span></div>
-
-          <div className="section orange">✦ Faça seu Melhor no Ministério</div>
-          {[
-            { n: 4, t: meetingData.part1Theme, p: meetingData.part1Speaker, a: meetingData.part1Assistant, h: meetingData.part1SecondHelper },
-            { n: 5, t: meetingData.part2Theme, p: meetingData.part2Speaker, a: meetingData.part2Assistant, h: meetingData.part2SecondHelper },
-            { n: 6, t: meetingData.part3Theme, p: meetingData.part3Speaker, a: meetingData.part3Assistant, h: meetingData.part3SecondHelper },
-            { n: 7, t: meetingData.part4Theme, p: meetingData.part4Speaker, a: meetingData.part4Assistant, h: meetingData.part4SecondHelper },
-          ].map(pt => (
-            <div className="row" key={pt.n}>
-              <span>{pt.n}- {pt.t || 'TEXTO AQUI'}</span>
-              <span>{[pt.p, pt.a, pt.h].filter(Boolean).join(' / ') || 'DESIGNADO AQUI'}</span>
-            </div>
-          ))}
-
-          <div className="section rose">✦ Nossa Vida Cristã</div>
-          <div className="row"><span>9- {meetingData.lifePart1Theme || 'TEXTO AQUI'}</span><span>{meetingData.lifePart1Speaker || 'DESIGNADO AQUI'}</span></div>
-          {meetingData.lifePart2Theme && <div className="row"><span>   {meetingData.lifePart2Theme}</span><span>{meetingData.lifePart2Speaker || 'DESIGNADO AQUI'}</span></div>}
-          {meetingData.lifePart3Theme && <div className="row"><span>   {meetingData.lifePart3Theme}</span><span>{meetingData.lifePart3Speaker || 'DESIGNADO AQUI'}</span></div>}
-          <div className="cbs">
-            <span style={{ fontWeight: 'bold' }}>10- ESTUDO BÍBLICO</span>
-            <span className="lbl">DIRIGENTE</span><span className="val">{meetingData.cbsConductor || 'DESIGNADO AQUI'}</span>
-            <span className="lbl">LEITOR</span><span className="val">{meetingData.cbsReader || 'DESIGNADO AQUI'}</span>
-          </div>
-
-          <div className="mech">PARTES MECÂNICAS DA REUNIÃO</div>
-          <div className="grid2" style={{ marginTop: '1mm' }}>
-            <div className="field"><span className="lbl">INDICADOR - 1</span><span className="val">{meetingData.mechanicalIndicador1}</span></div>
-            <div className="field"><span className="lbl">INDICADOR - 2</span><span className="val">{meetingData.mechanicalIndicador2}</span></div>
-            <div className="field"><span className="lbl">MICROFONE - 1</span><span className="val">{meetingData.mechanicalMicrofone1}</span></div>
-            <div className="field"><span className="lbl">MICROFONE - 2</span><span className="val">{meetingData.mechanicalMicrofone2}</span></div>
-            <div className="field"><span className="lbl">AUDIO E VIDEO</span><span className="val">{meetingData.mechanicalAudioVideo}</span></div>
-            <div className="field"><span className="lbl">PALCO</span><span className="val">{meetingData.mechanicalPalco}</span></div>
-          </div>
-        </div>
-      </div>
+      {showSchool && schoolCards.length > 0 && (
+        <SchoolPreviewModal
+          cards={schoolCards}
+          onClose={() => setShowSchool(false)}
+        />
+      )}
     </div>
   );
 }
