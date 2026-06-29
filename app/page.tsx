@@ -12,6 +12,7 @@ import { GroupsView } from '@/components/groups-view';
 import { MidweekView } from '@/components/midweek-view';
 import { WeekendView } from '@/components/weekend-view';
 import { FieldReportView } from '@/components/field-report-view';
+import { ServiceView } from '@/components/service-view';
 import { PrintsView } from '@/components/prints-view';
 import { SettingsView } from '@/components/settings-view';
 import { AttendanceView } from '@/components/attendance-view';
@@ -97,6 +98,7 @@ export default function Home() {
             </ScrollArea>
           )}
           {activeTab === 'field' && <FieldReportView onDirtyChange={setFieldDirty} />}
+          {activeTab === 'service' && <ServiceView onDirtyChange={setFieldDirty} />}
           {activeTab === 'prints' && (
             <div className="flex-1 pr-3 overflow-y-auto">
               <PrintsView />

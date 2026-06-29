@@ -1,17 +1,18 @@
 'use client';
 
 import React from 'react';
-import { 
-  BarChart3, 
-  Users, 
-  Calendar, 
-  FileText, 
-  Settings, 
-  LogOut, 
+import {
+  BarChart3,
+  Users,
+  Calendar,
+  FileText,
+  Settings,
+  LogOut,
   UsersRound,
   LayoutDashboard,
   Printer,
-  Shield
+  Shield,
+  Briefcase
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/components/auth-provider';
@@ -40,6 +41,7 @@ export function Sidebar({ activeTab, onNavigate }: SidebarProps) {
     ]},
     { title: 'RELATÓRIOS', items: [
       { id: 'field', label: 'Relatório de campo', icon: FileText },
+      { id: 'service', label: 'Serviço de Campo', icon: Briefcase },
       { id: 'prints', label: 'Impressões', icon: Printer },
     ]},
     { title: 'CONFIGURAÇÃO', items: [

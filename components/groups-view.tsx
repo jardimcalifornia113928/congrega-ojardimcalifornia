@@ -183,7 +183,7 @@ export function GroupsView() {
                     <tr>
                       <td>${i + 1}</td>
                       <td>${p.firstName || ''} ${p.lastName || ''}</td>
-                      <td>${p.responsibility === 'anciao' ? 'Ancião' : p.responsibility === 'servo' ? 'Servo Ministerial' : 'Publicador'}</td>
+                      <td>${p.responsibility === 'anciao' ? 'Ancião' : p.responsibility === 'servo' ? 'Servo' : 'Publicador'}</td>
                       <td>${p.pioneerType === 'regular' ? 'Pioneiro Regular' : p.pioneerType === 'auxiliar' ? 'Auxiliar' : '-'}</td>
                     </tr>
                   `).join('')}
@@ -211,7 +211,7 @@ export function GroupsView() {
                     <tr>
                       <td>${i + 1}</td>
                       <td>${p.firstName || ''} ${p.lastName || ''}</td>
-                      <td>${p.responsibility === 'anciao' ? 'Ancião' : p.responsibility === 'servo' ? 'Servo Ministerial' : 'Publicador'}</td>
+                      <td>${p.responsibility === 'anciao' ? 'Ancião' : p.responsibility === 'servo' ? 'Servo' : 'Publicador'}</td>
                       <td>${p.pioneerType === 'regular' ? 'Pioneiro Regular' : p.pioneerType === 'auxiliar' ? 'Auxiliar' : '-'}</td>
                     </tr>
                   `).join('')}

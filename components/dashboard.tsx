@@ -44,7 +44,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   const [publishers, setPublishers] = useState<PublisherSummary[]>([]);
   const [groups, setGroups] = useState<GroupSummary[]>([]);
   const [missingReports, setMissingReports] = useState<Set<string>>(new Set());
-  const [statsCount, setStatsCount] = useState({ active: 0, totalStudies: 0, totalHours: 0 });
+  const [statsCount, setStatsCount] = useState({ active: 0, totalStudies: 0, totalHours: 0, regularPioneers: 0, auxiliaryPioneers: 0 });
   const [reportStats, setReportStats] = useState({
     whoReported: 0,
     whoReported6Months: 0,
@@ -121,7 +121,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     // Reset data immediately when month changes
     setMissingReports(new Set());
     setAvgAttendance(null);
-    setStatsCount({ active: 0, totalStudies: 0, totalHours: 0 });
+    setStatsCount({ active: 0, totalStudies: 0, totalHours: 0, regularPioneers: 0, auxiliaryPioneers: 0 });
     setReportStats({ whoReported: 0, whoReported6Months: 0, pubStudies: 0, regPioneerReports: 0, regPioneerHours: 0, regPioneerStudies: 0, auxPioneerReports: 0, auxPioneerHours: 0, auxPioneerStudies: 0 });
 
     const fetchCurrentReport = async () => {

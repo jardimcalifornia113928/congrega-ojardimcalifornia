@@ -661,7 +661,7 @@ export function PublishersView() {
                         { title: "Vida e Ministério", items: ["Iniciando conversas", "Cultivando o interesse", "Fazendo discípulos", "Explicando suas crenças", "Discurso", "Estudo Bíblico", "Ajudante"] },
                         { title: "Nossa vida cristã", items: ["Partes", "Estudo Bíblico", "Leitor"] },
                         { title: "Fim de semana", items: ["Orador local", "Orador fora", "Presidente", "Oração inicial", "Dirigente A Sentinela", "Leitor", "Oração final"] },
-                        { title: "Serviço de campo", items: ["Testemunho público", "Dirigente de campo", "Super. de Grupo", "Aux. Super. de Grupo"] },
+                        { title: "Serviço de campo", items: ["Saída de campo", "Testemunho público", "Dirigente de campo", "Super. de Grupo", "Aux. Super. de Grupo"] },
                         { title: "Designação Mecânica", items: ["Indicador", "Microfones", "Som", "Palco"] },
                       ].map((sec) => (
                         <Card key={sec.title} className="bg-[#0F172A] border-[#1E293B]/50 shadow-sm rounded-3xl overflow-hidden group hover:border-[#0EA5E9]/30 transition-all">
