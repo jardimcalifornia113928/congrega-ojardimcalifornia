@@ -165,7 +165,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
 
         if (!active) return;
         setMissingReports(missing);
-        setStatsCount({ active: activePubs.length, totalHours, totalStudies });
+        setStatsCount({ active: activePubs.length, totalHours, totalStudies, regularPioneers: 0, auxiliaryPioneers: 0 });
         setReportStats({ whoReported, whoReported6Months: 0, pubStudies, regPioneerReports, regPioneerHours, regPioneerStudies, auxPioneerReports, auxPioneerHours, auxPioneerStudies });
       } catch (error) {
         if (!active) return;
