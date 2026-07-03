@@ -137,6 +137,9 @@ export function SettingsView() {
           if (!docData || typeof docData !== 'object' || Array.isArray(docData)) {
             throw new Error(`Documento "${colName}/${docId}" inválido: o valor deve ser um objeto.`);
           }
+          if (Object.keys(docData as Record<string, unknown>).length === 0) {
+            throw new Error(`Documento "${colName}/${docId}" vazio: não é permitido restaurar documentos sem campos.`);
+          }
         }
       }
 

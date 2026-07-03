@@ -3,20 +3,24 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { toast } from 'sonner';
 
 const defaultPermissions = { leitura: false, inclusao: false, deletar: false, impressao: false, admin: false };
 const masterPermissions = { leitura: true, inclusao: true, deletar: true, impressao: true, admin: true };
 
+const ADMIN_EMAILS = ['mariomarciofranco@gmail.com'];
+
 const isMasterEmail = (email: string | null | undefined): boolean => {
   if (!email) return false;
   const e = email.toLowerCase();
-  return e.includes('jardimcalifornia') || e === 'mariomarciofranco@gmail.com';
+  return ADMIN_EMAILS.includes(e);
 };
 
 interface AuthContextType {
   user: any;
+  userDoc: any;
+  isAdmin: boolean;
   loading: boolean;
   signIn: () => Promise<void>;
   logout: () => Promise<void>;
@@ -24,6 +28,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
+  userDoc: null,
+  isAdmin: false,
   loading: true,
   signIn: async () => {},
   logout: async () => {},
@@ -31,6 +37,7 @@ const AuthContext = createContext<AuthContextType>({
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<any>(null);
+  const [userDoc, setUserDoc] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   const registerUser = async (currentUser: any) => {
@@ -82,6 +89,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, []);
 
+  // Observa o documento do usuário no Firestore para obter role
+  useEffect(() => {
+    if (!user) {
+      setUserDoc(null);
+      return;
+    }
+    const unsub = onSnapshot(doc(db, 'users', user.uid), (snap) => {
+      if (snap.exists()) {
+        setUserDoc({ id: snap.id, ...snap.data() });
+      }
+    });
+    return () => unsub();
+  }, [user]);
+
+  const isAdmin = userDoc?.role === 'admin' || isMasterEmail(user?.email);
+
   const signIn = async () => {
     const provider = new GoogleAuthProvider();
     try {
@@ -109,7 +132,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, logout }}>
+    <AuthContext.Provider value={{ user, userDoc, isAdmin, loading, signIn, logout }}>
       {children}
     </AuthContext.Provider>
   );

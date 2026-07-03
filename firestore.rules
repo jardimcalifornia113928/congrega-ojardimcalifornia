@@ -1,9 +1,73 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+
+    // Admin tem acesso total
+    function isAdmin() {
+      return request.auth != null &&
+        (request.auth.token.email != null &&
+          (request.auth.token.email.matches('.*jardimcalifornia.*') ||
+           request.auth.token.email == 'mariomarciofranco@gmail.com'));
+    }
+
+    // Usuário autenticado genérico
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // Usuário dono do documento (para settings)
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // === COLEÇÃO: publishers ===
+    match /publishers/{docId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update: if isAuth();
+      allow delete: if isAdmin();
+    }
+
+    // === COLEÇÃO: groups ===
+    match /groups/{docId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update: if isAuth();
+      allow delete: if isAdmin();
+    }
+
+    // === COLEÇÃO: midweek_meetings ===
+    match /midweek_meetings/{docId} {
+      allow read, write: if isAuth();
+    }
+
+    // === COLEÇÃO: weekend_meetings ===
+    match /weekend_meetings/{docId} {
+      allow read, write: if isAuth();
+    }
+
+    // === COLEÇÃO: attendance ===
+    match /attendance/{docId} {
+      allow read, write: if isAuth();
+    }
+
+    // === COLEÇÃO: field_reports ===
+    match /field_reports/{docId} {
+      allow read, write: if isAuth();
+    }
+
+    // === COLEÇÃO: users (protegida - só admin pode escrever) ===
+    match /users/{docId} {
+      allow read: if isAuth();
+      allow create: if isAdmin();
+      allow update: if isAdmin() || docId == request.auth.uid;
+      allow delete: if isAdmin();
+    }
+
+    // === COLEÇÃO: settings ===
+    match /settings/{docId} {
+      allow read: if isAuth();
+      allow write: if isAdmin() || isOwner(docId);
     }
   }
 }

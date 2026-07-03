@@ -33,10 +33,11 @@ const PERMISSION_COLUMNS: { id: keyof UserPermissions; label: string; tooltip: s
   { id: 'admin', label: 'Admin', tooltip: 'Acesso total ao sistema' },
 ];
 
+const MASTER_EMAILS = ['mariomarciofranco@gmail.com'];
+
 const isMasterEmail = (email: string | null | undefined): boolean => {
   if (!email) return false;
-  const e = email.toLowerCase();
-  return e.includes('jardimcalifornia') || e === 'mariomarciofranco@gmail.com';
+  return MASTER_EMAILS.includes(email.toLowerCase());
 };
 
 const defaultPermissions: UserPermissions = {
@@ -48,13 +49,11 @@ const defaultPermissions: UserPermissions = {
 };
 
 export function UsersView() {
-  const { user: authUser } = useAuth();
+  const { user: authUser, isAdmin } = useAuth();
   const [users, setUsers] = useState<UserData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [savingUserId, setSavingUserId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-
-  const isAdmin = isMasterEmail(authUser?.email);
 
   useEffect(() => {
     if (!isAdmin) {

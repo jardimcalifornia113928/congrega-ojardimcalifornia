@@ -66,8 +66,8 @@ function PublisherInput({
 
   const getRoleDesignationKey = (role: string): string => {
     if (role === "Presidente") return "Fim de semana::Presidente";
-    if (role === "Oração inicial") return "Tesouros da Palavra::Oração inicial";
-    if (role === "Oração final") return "Tesouros da Palavra::Oração final";
+    if (role === "Oração inicial") return "Fim de semana::Oração inicial";
+    if (role === "Oração final") return "Fim de semana::Oração final";
     if (role === "Orador local") return "Fim de semana::Orador local";
     if (role === "Orador visitante") return "Fim de semana::Orador fora";
     if (role === "Dirigente A sentinela") return "Fim de semana::Dirigente A Sentinela";

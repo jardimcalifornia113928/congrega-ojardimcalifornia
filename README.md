@@ -1,20 +1,48 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Congregação Jardim Califórnia
 
-# Run and deploy your AI Studio app
+Sistema de gestão congregacional — Publicadores, Reuniões, Relatórios de Campo e Impressões.
 
-This contains everything you need to run your app locally.
+## Funcionalidades
 
-View your app in AI Studio: https://ai.studio/apps/f33b6c12-caae-4d94-acc1-b0359bc50aa4
+- Cadastro de publicadores com designações e responsabilidades
+- Gerenciamento de grupos de campo
+- Programação de reuniões de meio de semana e fim de semana
+- Relatório de campo mensal (S-21)
+- Controle de frequência
+- Impressão de relatórios e designações
+- Backup e restauração de dados
+- Painel administrativo com permissões de usuário
 
-## Run Locally
+## Tecnologias
 
-**Prerequisites:**  Node.js
+- Next.js 15 (App Router)
+- React 19
+- Firebase (Auth + Firestore)
+- Tailwind CSS 4
+- TypeScript
 
+## Como Executar
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+```bash
+# 1. Instalar dependências
+npm install
+
+# 2. Configurar Firebase
+# Crie um arquivo .env.local com as credenciais do seu projeto Firebase:
+#   NEXT_PUBLIC_FIREBASE_API_KEY=
+#   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+#   NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+#   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
+#   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+#   NEXT_PUBLIC_FIREBASE_APP_ID=
+
+# 3. Iniciar em modo dev
+npm run dev
+```
+
+## Deploy
+
+```bash
+npm run build
+npm start
+```
