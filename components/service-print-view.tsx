@@ -42,7 +42,7 @@ export function ServicePrintView({
           sundayPraia,
         });
         if (cancelled) return;
-        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+        const blob = new Blob([pdfBytes as BlobPart], { type: 'application/pdf' });
         currentUrl = URL.createObjectURL(blob);
         setPdfUrl(currentUrl);
       } catch (error) {
