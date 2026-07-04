@@ -186,7 +186,7 @@ export async function generateCarrinhoPDF(data: CarrinhoPrintData): Promise<Uint
 }
 
 export function openPDFForPrint(bytes: Uint8Array) {
-  const blob = new Blob([bytes], { type: 'application/pdf' });
+  const blob = new Blob([bytes as BlobPart], { type: 'application/pdf' });
   const url = URL.createObjectURL(blob);
   const printWindow = window.open(url, '_blank');
   if (printWindow) {
@@ -197,7 +197,7 @@ export function openPDFForPrint(bytes: Uint8Array) {
 }
 
 export function downloadPDF(bytes: Uint8Array, filename: string) {
-  const blob = new Blob([bytes], { type: 'application/pdf' });
+  const blob = new Blob([bytes as BlobPart], { type: 'application/pdf' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
