@@ -12,7 +12,8 @@ import {
   LayoutDashboard,
   Printer,
   Shield,
-  Briefcase
+  Briefcase,
+  ClipboardList
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/components/auth-provider';
@@ -42,6 +43,7 @@ export function Sidebar({ activeTab, onNavigate }: SidebarProps) {
     { title: 'RELATÓRIOS', items: [
       { id: 'field', label: 'Relatório de campo', icon: FileText },
       { id: 'service', label: 'Serviço de Campo', icon: Briefcase },
+      { id: 'public_witness', label: 'Testemunho Público', icon: ClipboardList },
       { id: 'prints', label: 'Impressões', icon: Printer },
     ]},
     { title: 'CONFIGURAÇÃO', items: [

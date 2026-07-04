@@ -17,6 +17,7 @@ import { PrintsView } from '@/components/prints-view';
 import { SettingsView } from '@/components/settings-view';
 import { AttendanceView } from '@/components/attendance-view';
 import { UsersView } from '@/components/users-view';
+import { PublicWitnessView } from '@/components/public-witness-view';
 
 export default function Home() {
   const { user, loading, signIn } = useAuth();
@@ -99,6 +100,7 @@ export default function Home() {
           )}
           {activeTab === 'field' && <FieldReportView onDirtyChange={setFieldDirty} />}
           {activeTab === 'service' && <ServiceView onDirtyChange={setFieldDirty} />}
+          {activeTab === 'public_witness' && <PublicWitnessView />}
           {activeTab === 'prints' && (
             <div className="flex-1 pr-3 overflow-y-auto">
               <PrintsView />

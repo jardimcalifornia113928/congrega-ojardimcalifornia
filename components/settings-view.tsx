@@ -45,7 +45,7 @@ export function SettingsView() {
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
 
-  const COLLECTIONS = ['publishers', 'groups', 'midweek_meetings', 'weekend_meetings', 'attendance', 'field_reports', 'users'];
+  const COLLECTIONS = ['publishers', 'groups', 'midweek_meetings', 'weekend_meetings', 'attendance', 'field_reports', 'users', 'public_witness'];
 
   const SETTINGS_DOC_ID = user ? `congregation_${user.uid}` : null;
 

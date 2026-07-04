@@ -56,6 +56,11 @@ service cloud.firestore {
       allow read, write: if isAuth();
     }
 
+    // === COLEÇÃO: public_witness ===
+    match /public_witness/{docId} {
+      allow read, write: if isAuth();
+    }
+
     // === COLEÇÃO: users (protegida - só admin pode escrever) ===
     match /users/{docId} {
       allow read: if isAuth();
