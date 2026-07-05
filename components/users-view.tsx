@@ -33,7 +33,7 @@ const PERMISSION_COLUMNS: { id: keyof UserPermissions; label: string; tooltip: s
   { id: 'admin', label: 'Admin', tooltip: 'Acesso total ao sistema' },
 ];
 
-const MASTER_EMAILS = ['mariomarciofranco@gmail.com'];
+const MASTER_EMAILS = ['mariomarciofranco@gmail.com', 'jardimcalifornia@gmail.com'];
 
 const isMasterEmail = (email: string | null | undefined): boolean => {
   if (!email) return false;

@@ -141,7 +141,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
 
         for (const p of activePubs) {
           const entry = reports[p.id];
-          if (!entry) {
+          if (!entry || !entry.participou) {
             missing.add(p.id);
           } else {
             whoReported++;
@@ -167,6 +167,25 @@ export function Dashboard({ onNavigate }: DashboardProps) {
         setMissingReports(missing);
         setStatsCount({ active: activePubs.length, totalHours, totalStudies, regularPioneers: 0, auxiliaryPioneers: 0 });
         setReportStats({ whoReported, whoReported6Months: 0, pubStudies, regPioneerReports, regPioneerHours, regPioneerStudies, auxPioneerReports, auxPioneerHours, auxPioneerStudies });
+
+        // DEBUG: per-group breakdown
+        console.log('=== DEBUG DASHBOARD ===');
+        console.log('Mês:', selectedMonthId);
+        console.log('Total activePubs:', activePubs.length);
+        console.log('Total missing:', missing.size);
+        const debugGroups = groups.map(g => {
+          const gp = activePubs.filter(p => p.groupId === g.id);
+          const gm = gp.filter(p => missing.has(p.id));
+          return { group: g.name, total: gp.length, missing: gm.length, names: gm.map(p => `${p.firstName} ${p.lastName}`) };
+        });
+        console.table(debugGroups);
+        const ungrouped = activePubs.filter(p => !p.groupId || !groups.some(g => g.id === p.groupId));
+        if (ungrouped.length > 0) {
+          const ungroupedMissing = ungrouped.filter(p => missing.has(p.id));
+          console.log(`Sem grupo: ${ungrouped.length} ativos, ${ungroupedMissing.length} faltam`);
+          console.log('Nomes:', ungrouped.map(p => `${p.firstName} ${p.lastName}`));
+        }
+        console.log('=======================');
       } catch (error) {
         if (!active) return;
         console.error("Error fetching current report:", error);
@@ -442,7 +461,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                 <p className="text-[11px] text-[#64748B] mt-0.5">{missingReports.size} publicador(es) faltam lançar relatório de {selectedMonthId ? getMonthLabel(selectedMonthId) : currentMonthLabel}</p>
               </div>
             </div>
-            <Button onClick={() => onNavigate('field')} className="h-8 bg-[#0EA5E9] hover:bg-[#0EA5E9]/90 text-white font-medium rounded-lg text-[11px] px-4">
+            <Button className="h-8 bg-[#0EA5E9]/50 text-white/50 font-medium rounded-lg text-[11px] px-4 cursor-not-allowed" disabled>
               Lançar Agora
             </Button>
           </CardHeader>

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { generateCarrinhoPDF } from '@/print/services/carrinho-pdf-generator';
 
 interface DayRow {
   date: string;
@@ -14,12 +15,14 @@ interface CarrinhoPrintViewProps {
   month: string;
   carrinhoMacaco: DayRow[];
   carrinhoRetao: DayRow[];
+  orientacoes?: string;
 }
 
 export function CarrinhoPrintView({
   month,
   carrinhoMacaco,
   carrinhoRetao,
+  orientacoes,
 }: CarrinhoPrintViewProps) {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
@@ -29,11 +32,11 @@ export function CarrinhoPrintView({
 
     const generatePreview = async () => {
       try {
-        const { generateCarrinhoPDF } = await import('@/print/services/carrinho-pdf-generator');
         const pdfBytes = await generateCarrinhoPDF({
           month,
           carrinhoMacaco,
           carrinhoRetao,
+          orientacoes,
         });
         if (cancelled) return;
         const blob = new Blob([pdfBytes as BlobPart], { type: 'application/pdf' });
@@ -50,7 +53,7 @@ export function CarrinhoPrintView({
       cancelled = true;
       if (currentUrl) URL.revokeObjectURL(currentUrl);
     };
-  }, [month, carrinhoMacaco, carrinhoRetao]);
+  }, [month, carrinhoMacaco, carrinhoRetao, orientacoes]);
 
   return (
     <div style={{

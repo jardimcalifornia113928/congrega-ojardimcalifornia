@@ -32,3 +32,6 @@ yarn-error.log*
 # temp files
 *.tmp
 server-log.txt
+dev.log
+dev_err.log
+dev_out.log

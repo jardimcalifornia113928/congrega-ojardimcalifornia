@@ -12,6 +12,7 @@ interface CarrinhoPrintData {
   month: string;
   carrinhoMacaco: DayRow[];
   carrinhoRetao: DayRow[];
+  orientacoes?: string;
 }
 
 const formatValue = (value: string): string => {
@@ -25,7 +26,8 @@ const drawTable = (
   boldFont: Awaited<ReturnType<PDFDocument['embedFont']>>,
   rows: DayRow[],
   startY: number,
-  maxRows: number
+  maxRows: number,
+  labels: string[] = ['12:00-14:00', '14:00-16:00', '16:00-18:00']
 ): { endY: number; remaining: DayRow[] } => {
   const leftMargin = 23;
   const colDia = 35;
@@ -72,9 +74,8 @@ const drawTable = (
   page.drawText('Dia', { x: leftMargin + 4, y: currentY + 4, size: 10, font: boldFont, color: rgb(0.1, 0.15, 0.4) });
   page.drawText('Data', { x: leftMargin + colDia + 4, y: currentY + 4, size: 10, font: boldFont, color: rgb(0.1, 0.15, 0.4) });
 
-  const horarios = ['12:00-14:00', '14:00-16:00', '16:00-18:00'];
   let hx = leftMargin + colDia + colData;
-  horarios.forEach(label => {
+  labels.forEach(label => {
     page.drawText(label, { x: hx + 2, y: currentY + 4, size: 10, font: boldFont, color: rgb(0.1, 0.15, 0.4) });
     hx += colHorario;
   });
@@ -137,8 +138,8 @@ export async function generateCarrinhoPDF(data: CarrinhoPrintData): Promise<Uint
   const maxRowsPerPage = Math.floor((height - 300) / 22);
 
   const rowsByCart = [
-    { title: 'Carrinho Macaco', rows: data.carrinhoMacaco },
-    { title: 'Carrinho Retão', rows: data.carrinhoRetao },
+    { title: 'Carrinho Macaco', rows: data.carrinhoMacaco, labels: ['12:00-14:00', '14:00-16:00', '16:00-18:00'] },
+    { title: 'Carrinho Retão', rows: data.carrinhoRetao, labels: ['12:00-14:00', '14:00-16:00', '16:00-18:00'] },
   ];
 
   for (const cart of rowsByCart) {
@@ -153,7 +154,7 @@ export async function generateCarrinhoPDF(data: CarrinhoPrintData): Promise<Uint
 
       page.drawText(cart.title, {
         x: 35,
-        y: height - 135,
+        y: height - 91,
         size: 14,
         font: boldFont,
         color: rgb(0.12, 0.23, 0.55),
@@ -161,13 +162,13 @@ export async function generateCarrinhoPDF(data: CarrinhoPrintData): Promise<Uint
 
       page.drawText(`Mês: ${data.month}`, {
         x: 35,
-        y: height - 155,
+        y: height - 111,
         size: 12,
         font,
         color: rgb(0.3, 0.3, 0.3),
       });
 
-      const result = drawTable(page, font, boldFont, remaining, height - 195, maxRowsPerPage);
+      const result = drawTable(page, font, boldFont, remaining, height - 151, maxRowsPerPage, cart.labels);
       remaining = result.remaining;
 
       if (remaining.length > 0) {
@@ -178,6 +179,26 @@ export async function generateCarrinhoPDF(data: CarrinhoPrintData): Promise<Uint
           font,
           color: rgb(0.5, 0.5, 0.5),
         });
+      }
+
+      if (remaining.length === 0 && data.orientacoes) {
+        let oy = result.endY - 5;
+        page.drawText('Orientações', {
+          x: 30, y: oy + 5, size: 12, font: boldFont, color: rgb(0.12, 0.23, 0.55),
+        });
+        const boxH = 100;
+        page.drawRectangle({
+          x: 30, y: oy - boxH, width: 540, height: boxH,
+          color: rgb(1, 1, 1), borderColor: rgb(0.2, 0.3, 0.5), borderWidth: 1,
+        });
+        const maxChars = 50;
+        let text = data.orientacoes;
+        let ty = oy - 20;
+        while (text.length > 0 && ty > oy - boxH + 10) {
+          page.drawText(text.substring(0, maxChars), { x: 40, y: ty, size: 12, font, color: rgb(0.3, 0.3, 0.3) });
+          text = text.substring(maxChars);
+          ty -= 22;
+        }
       }
     }
   }

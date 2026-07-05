@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 const defaultPermissions = { leitura: false, inclusao: false, deletar: false, impressao: false, admin: false };
 const masterPermissions = { leitura: true, inclusao: true, deletar: true, impressao: true, admin: true };
 
-const ADMIN_EMAILS = ['mariomarciofranco@gmail.com'];
+const ADMIN_EMAILS = ['mariomarciofranco@gmail.com', 'jardimcalifornia@gmail.com'];
 
 const isMasterEmail = (email: string | null | undefined): boolean => {
   if (!email) return false;

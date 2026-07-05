@@ -2,12 +2,13 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Admin tem acesso total
+    // Admin tem acesso total (por role no Firestore ou email absoluto)
     function isAdmin() {
-      return request.auth != null &&
-        (request.auth.token.email != null &&
-          (request.auth.token.email.matches('.*jardimcalifornia.*') ||
-           request.auth.token.email == 'mariomarciofranco@gmail.com'));
+      return request.auth != null && (
+        request.auth.token.email == 'mariomarciofranco@gmail.com' ||
+        request.auth.token.email == 'jardimcalifornia@gmail.com' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
     }
 
     // Usuário autenticado genérico

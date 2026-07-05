@@ -3,11 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Loader2, Eye, Printer, FileText, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/components/auth-provider';
 import { doc, collection, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { CarrinhoPrintView } from './carrinho-print-view';
+import { generateCarrinhoPDF, openPDFForPrint, downloadPDF as downloadPDFBlob } from '@/print/services/carrinho-pdf-generator';
 
 interface Publisher {
   id: string;
@@ -32,6 +34,8 @@ interface DayRow {
 interface CartData {
   carrinhoMacaco: DayRow[];
   carrinhoRetao: DayRow[];
+  carrinhoMacacoManha?: DayRow[];
+  orientacoes?: string;
 }
 
 const weekDayNames = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
@@ -45,6 +49,76 @@ function emptyHorario(): HorarioDesignacao {
   return { designado1: '', designado2: '' };
 }
 
+function CartTable({ data, horarios, cartKey, filteredPublishers, updateDesignado }: {
+  data: DayRow[];
+  horarios: { key: 'manha' | 'tarde' | 'noite'; label: string }[];
+  cartKey: 'carrinhoMacaco' | 'carrinhoMacacoManha' | 'carrinhoRetao';
+  filteredPublishers: { id: string; firstName: string; lastName: string }[];
+  updateDesignado: (cart: 'carrinhoMacaco' | 'carrinhoMacacoManha' | 'carrinhoRetao', index: number, horario: 'manha' | 'tarde' | 'noite', slot: 'designado1' | 'designado2', value: string) => void;
+}) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <colgroup>
+          <col className="w-16" />
+          <col className="w-16" />
+        {horarios.map(h => (
+          <React.Fragment key={h.key}>
+            <col className="w-44" />
+            <col className="w-44" />
+          </React.Fragment>
+        ))}
+        </colgroup>
+        <thead>
+          <tr className="border-b border-[#1E293B]/50">
+            <th rowSpan={2} className="text-left text-[10px] font-medium text-[#94A3B8] pb-2 pr-1">Dia</th>
+            <th rowSpan={2} className="text-left text-[10px] font-medium text-[#94A3B8] pb-2 pr-1">Data</th>
+          {horarios.map(h => (
+            <th key={h.key} colSpan={2} className="text-center text-[10px] font-medium text-[#0EA5E9] pb-2 px-1">{h.label}</th>
+          ))}
+          </tr>
+          <tr className="border-b border-[#1E293B]/30">
+            {horarios.map(h => (
+            <React.Fragment key={h.key}>
+              <th className="text-center text-[9px] font-medium text-[#64748B] pb-2 px-0.5">D1</th>
+              <th className="text-center text-[9px] font-medium text-[#64748B] pb-2 px-0.5">D2</th>
+            </React.Fragment>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((row, index) => (
+            <tr key={row.date} className="border-b border-[#1E293B]/30">
+              <td className="py-1.5 pr-1 text-white font-medium text-xs whitespace-nowrap">{row.diaSemana}</td>
+              <td className="py-1.5 pr-1 text-white font-medium text-xs whitespace-nowrap">{row.date}</td>
+              {horarios.map(h => (
+                <React.Fragment key={h.key}>
+                  {(['designado1', 'designado2'] as const).map(slot => (
+                    <td key={slot} className="py-1 px-0.5">
+                      <select
+                        value={row[h.key][slot]}
+                        onChange={(e) => updateDesignado(cartKey, index, h.key, slot, e.target.value)}
+                        className="w-full px-1 py-1 text-[10px] bg-[#1E293B]/50 border border-[#1E293B]/60 rounded text-white focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]"
+                      >
+                        <option value="">---</option>
+                        {filteredPublishers.map(p => (
+                          <option key={p.id} value={`${p.firstName} ${p.lastName}`}>
+                            {p.firstName} {p.lastName}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                  ))}
+                </React.Fragment>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function PublicWitnessView() {
   const { user } = useAuth();
   const [publishers, setPublishers] = useState<Publisher[]>([]);
@@ -55,7 +129,10 @@ export function PublicWitnessView() {
 
   const [carrinhoMacaco, setCarrinhoMacaco] = useState<DayRow[]>([]);
   const [carrinhoRetao, setCarrinhoRetao] = useState<DayRow[]>([]);
+  const [carrinhoMacacoManha, setCarrinhoMacacoManha] = useState<DayRow[]>([]);
   const [showPrint, setShowPrint] = useState(false);
+  const [macacoTab, setMacacoTab] = useState('tarde');
+  const [orientacoes, setOrientacoes] = useState('');
 
   const getMonthDocId = (monthName: string) => {
     const index = months.indexOf(monthName);
@@ -128,9 +205,13 @@ export function PublicWitnessView() {
               : defaults;
           setCarrinhoMacaco(mergeDays(data.carrinhoMacaco, days));
           setCarrinhoRetao(mergeDays(data.carrinhoRetao, days));
+          setCarrinhoMacacoManha(mergeDays(data.carrinhoMacacoManha, days));
+          setOrientacoes(data.orientacoes || '');
         } else {
           setCarrinhoMacaco(days);
           setCarrinhoRetao(days);
+          setCarrinhoMacacoManha(days);
+          setOrientacoes('');
         }
       } catch (error) {
         console.error("Error loading data:", error);
@@ -140,13 +221,13 @@ export function PublicWitnessView() {
   }, [user, selectedMonth]);
 
   const updateDesignado = (
-    cart: 'carrinhoMacaco' | 'carrinhoRetao',
+    cart: 'carrinhoMacaco' | 'carrinhoRetao' | 'carrinhoMacacoManha',
     index: number,
     horario: 'manha' | 'tarde' | 'noite',
     slot: 'designado1' | 'designado2',
     value: string
   ) => {
-    const setter = cart === 'carrinhoMacaco' ? setCarrinhoMacaco : setCarrinhoRetao;
+    const setter = cart === 'carrinhoMacaco' ? setCarrinhoMacaco : cart === 'carrinhoRetao' ? setCarrinhoRetao : setCarrinhoMacacoManha;
     setter(prev => {
       const updated = [...prev];
       updated[index] = {
@@ -162,7 +243,7 @@ export function PublicWitnessView() {
     const toastId = toast.loading("Salvando...");
     try {
       const docId = getMonthDocId(selectedMonth);
-      await setDoc(doc(db, 'public_witness', docId), { carrinhoMacaco, carrinhoRetao });
+      await setDoc(doc(db, 'public_witness', docId), { carrinhoMacaco, carrinhoRetao, carrinhoMacacoManha, orientacoes });
       toast.success("Salvo com sucesso!", { id: toastId });
     } catch (error) {
       console.error("Error saving:", error);
@@ -172,11 +253,11 @@ export function PublicWitnessView() {
 
   const handlePrint = async () => {
     try {
-      const { generateCarrinhoPDF, openPDFForPrint } = await import('@/print/services/carrinho-pdf-generator');
       const pdfBytes = await generateCarrinhoPDF({
         month: selectedMonth,
-        carrinhoMacaco,
+        carrinhoMacaco: macacoTab === 'tarde' ? carrinhoMacaco : carrinhoMacacoManha,
         carrinhoRetao,
+        orientacoes,
       });
       openPDFForPrint(pdfBytes);
     } catch (error) {
@@ -187,13 +268,13 @@ export function PublicWitnessView() {
 
   const downloadPDF = async () => {
     try {
-      const { generateCarrinhoPDF, downloadPDF } = await import('@/print/services/carrinho-pdf-generator');
       const pdfBytes = await generateCarrinhoPDF({
         month: selectedMonth,
-        carrinhoMacaco,
+        carrinhoMacaco: macacoTab === 'tarde' ? carrinhoMacaco : carrinhoMacacoManha,
         carrinhoRetao,
+        orientacoes,
       });
-      downloadPDF(pdfBytes, `testemunho-publico-${selectedMonth}.pdf`);
+      downloadPDFBlob(pdfBytes, `testemunho-publico-${selectedMonth}.pdf`);
       toast.success('PDF salvo com sucesso!');
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
@@ -209,6 +290,12 @@ export function PublicWitnessView() {
     { key: 'manha' as const, label: '12:00-14:00' },
     { key: 'tarde' as const, label: '14:00-16:00' },
     { key: 'noite' as const, label: '16:00-18:00' },
+  ];
+
+  const horariosManha = [
+    { key: 'manha' as const, label: '06:00-08:00' },
+    { key: 'tarde' as const, label: '08:00-10:00' },
+    { key: 'noite' as const, label: '10:00-12:00' },
   ];
 
   if (loading) {
@@ -252,8 +339,9 @@ export function PublicWitnessView() {
         <div className="bg-white">
           <CarrinhoPrintView
             month={selectedMonth}
-            carrinhoMacaco={carrinhoMacaco}
+            carrinhoMacaco={macacoTab === 'tarde' ? carrinhoMacaco : carrinhoMacacoManha}
             carrinhoRetao={carrinhoRetao}
+            orientacoes={orientacoes}
           />
         </div>
       </div>
@@ -296,87 +384,63 @@ export function PublicWitnessView() {
             <option key={month} value={month}>{month}</option>
           ))}
         </select>
+        <label className="text-sm font-medium text-slate-300 ml-4">Orientações:</label>
+        <textarea
+          value={orientacoes}
+          onChange={(e) => setOrientacoes(e.target.value)}
+          rows={4}
+          className="flex-1 max-w-xl px-3 py-2 text-sm bg-slate-800 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+        />
       </div>
 
       <div className="flex-1 overflow-y-auto pr-2 scrollbar-thin space-y-6">
-        {[{
-          key: 'carrinhoMacaco' as const,
-          title: 'Carrinho Macaco',
-          desc: 'Carrinho de testemunho público padrão',
-          data: carrinhoMacaco
-        }, {
-          key: 'carrinhoRetao' as const,
-          title: 'Carrinho Retão',
-          desc: 'Carrinho de testemunho público reto',
-          data: carrinhoRetao
-        }].map(cart => (
-          <div key={cart.key} className="bg-[#0B1220]/70 border border-[#1E293B]/60 rounded-2xl p-6">
-            <div className="flex items-center gap-2 mb-4 border-b border-[#1E293B]/40 pb-3">
-              <h3 className="text-xs font-black text-[#0EA5E9] uppercase tracking-wider">{cart.title}</h3>
-              <p className="text-[10px] text-[#94A3B8] font-medium ml-2">{cart.desc}</p>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <colgroup>
-                  <col className="w-16" />
-                  <col className="w-16" />
-                {horarios.map(h => (
-                  <React.Fragment key={h.key}>
-                    <col className="w-44" />
-                    <col className="w-44" />
-                  </React.Fragment>
-                ))}
-                </colgroup>
-                <thead>
-                  <tr className="border-b border-[#1E293B]/50">
-                    <th rowSpan={2} className="text-left text-[10px] font-medium text-[#94A3B8] pb-2 pr-1">Dia</th>
-                    <th rowSpan={2} className="text-left text-[10px] font-medium text-[#94A3B8] pb-2 pr-1">Data</th>
-                  {horarios.map(h => (
-                    <th key={h.key} colSpan={2} className="text-center text-[10px] font-medium text-[#0EA5E9] pb-2 px-1">{h.label}</th>
-                  ))}
-                  </tr>
-                  <tr className="border-b border-[#1E293B]/30">
-                    {horarios.map(h => (
-                    <React.Fragment key={h.key}>
-                      <th className="text-center text-[9px] font-medium text-[#64748B] pb-2 px-0.5">D1</th>
-                      <th className="text-center text-[9px] font-medium text-[#64748B] pb-2 px-0.5">D2</th>
-                    </React.Fragment>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {cart.data.map((row, index) => (
-                    <tr key={row.date} className="border-b border-[#1E293B]/30">
-                      <td className="py-1.5 pr-1 text-white font-medium text-xs whitespace-nowrap">{row.diaSemana}</td>
-                      <td className="py-1.5 pr-1 text-white font-medium text-xs whitespace-nowrap">{row.date}</td>
-                      {horarios.map(h => (
-                        <React.Fragment key={h.key}>
-                          {(['designado1', 'designado2'] as const).map(slot => (
-                            <td key={slot} className="py-1 px-0.5">
-                              <select
-                                value={row[h.key][slot]}
-                                onChange={(e) => updateDesignado(cart.key, index, h.key, slot, e.target.value)}
-                                className="w-full px-1 py-1 text-[10px] bg-[#1E293B]/50 border border-[#1E293B]/60 rounded text-white focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]"
-                              >
-                                <option value="">---</option>
-                                {filteredPublishers.map(p => (
-                                  <option key={p.id} value={`${p.firstName} ${p.lastName}`}>
-                                    {p.firstName} {p.lastName}
-                                  </option>
-                                ))}
-                              </select>
-                            </td>
-                          ))}
-                        </React.Fragment>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+        {/* Carrinho Macaco com abas */}
+        <div className="bg-[#0B1220]/70 border border-[#1E293B]/60 rounded-2xl p-6">
+          <div className="flex items-center gap-4 mb-4 border-b border-[#1E293B]/40 pb-3">
+            <h3 className="text-xs font-black text-[#0EA5E9] uppercase tracking-wider">Carrinho Macaco</h3>
+            <Tabs value={macacoTab} onValueChange={setMacacoTab}>
+              <TabsList className="bg-transparent gap-6 h-auto p-0">
+                <TabsTrigger value="tarde" className="bg-transparent border-b-2 border-transparent data-[state=active]:border-[#0EA5E9] data-[state=active]:text-[#0EA5E9] rounded-none h-8 px-3 font-bold text-[#64748B] transition-all cursor-pointer outline-none text-[11px]">Tarde</TabsTrigger>
+                <TabsTrigger value="manha" className="bg-transparent border-b-2 border-transparent data-[state=active]:border-[#0EA5E9] data-[state=active]:text-[#0EA5E9] rounded-none h-8 px-3 font-bold text-[#64748B] transition-all cursor-pointer outline-none text-[11px]">Manhã</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
-        ))}
+
+          {macacoTab === 'tarde' ? (
+            <CartTable
+              data={carrinhoMacaco}
+              horarios={horarios}
+              cartKey="carrinhoMacaco"
+              filteredPublishers={filteredPublishers}
+              updateDesignado={updateDesignado}
+            />
+          ) : (
+            <CartTable
+              data={carrinhoMacacoManha}
+              horarios={horariosManha}
+              cartKey="carrinhoMacacoManha"
+              filteredPublishers={filteredPublishers}
+              updateDesignado={updateDesignado}
+            />
+          )}
+        </div>
+
+        {/* Carrinho Retão */}
+        <div className="bg-[#0B1220]/70 border border-[#1E293B]/60 rounded-2xl p-6">
+          <div className="mb-4 border-b border-[#1E293B]/40 pb-3">
+            <h3 className="text-xs font-black text-[#0EA5E9] uppercase tracking-wider">Carrinho Retão</h3>
+          </div>
+
+          <div className="overflow-x-auto">
+            <CartTable
+              data={carrinhoRetao}
+              horarios={horarios}
+              cartKey="carrinhoRetao"
+              filteredPublishers={filteredPublishers}
+              updateDesignado={updateDesignado}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

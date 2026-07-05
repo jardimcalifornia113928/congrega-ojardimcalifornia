@@ -1,23 +1,25 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { useAuth } from '@/components/auth-provider';
 import { LogIn, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sidebar } from '@/components/sidebar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Dashboard } from '@/components/dashboard';
-import { PublishersView } from '@/components/publishers-view';
-import { GroupsView } from '@/components/groups-view';
-import { MidweekView } from '@/components/midweek-view';
-import { WeekendView } from '@/components/weekend-view';
-import { FieldReportView } from '@/components/field-report-view';
-import { ServiceView } from '@/components/service-view';
-import { PrintsView } from '@/components/prints-view';
-import { SettingsView } from '@/components/settings-view';
-import { AttendanceView } from '@/components/attendance-view';
-import { UsersView } from '@/components/users-view';
-import { PublicWitnessView } from '@/components/public-witness-view';
+
+const Dashboard = dynamic(() => import('@/components/dashboard').then(m => ({ default: m.Dashboard })), { ssr: false });
+const PublishersView = dynamic(() => import('@/components/publishers-view').then(m => ({ default: m.PublishersView })), { ssr: false });
+const GroupsView = dynamic(() => import('@/components/groups-view').then(m => ({ default: m.GroupsView })), { ssr: false });
+const MidweekView = dynamic(() => import('@/components/midweek-view').then(m => ({ default: m.MidweekView })), { ssr: false });
+const WeekendView = dynamic(() => import('@/components/weekend-view').then(m => ({ default: m.WeekendView })), { ssr: false });
+const FieldReportView = dynamic(() => import('@/components/field-report-view').then(m => ({ default: m.FieldReportView })), { ssr: false });
+const ServiceView = dynamic(() => import('@/components/service-view').then(m => ({ default: m.ServiceView })), { ssr: false });
+const PrintsView = dynamic(() => import('@/components/prints-view').then(m => ({ default: m.PrintsView })), { ssr: false });
+const SettingsView = dynamic(() => import('@/components/settings-view').then(m => ({ default: m.SettingsView })), { ssr: false });
+const AttendanceView = dynamic(() => import('@/components/attendance-view').then(m => ({ default: m.AttendanceView })), { ssr: false });
+const UsersView = dynamic(() => import('@/components/users-view').then(m => ({ default: m.UsersView })), { ssr: false });
+const PublicWitnessView = dynamic(() => import('@/components/public-witness-view').then(m => ({ default: m.PublicWitnessView })), { ssr: false });
 
 export default function Home() {
   const { user, loading, signIn } = useAuth();
@@ -81,7 +83,11 @@ export default function Home() {
               <Dashboard onNavigate={setActiveTab} />
             </div>
           )}
-          {activeTab === 'publishers' && <PublishersView />}
+          {activeTab === 'publishers' && (
+            <ScrollArea className="flex-1 pr-3">
+              <PublishersView />
+            </ScrollArea>
+          )}
           {activeTab === 'groups' && (
             <ScrollArea className="flex-1 pr-3">
               <GroupsView />
