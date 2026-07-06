@@ -20,6 +20,7 @@ const SettingsView = dynamic(() => import('@/components/settings-view').then(m =
 const AttendanceView = dynamic(() => import('@/components/attendance-view').then(m => ({ default: m.AttendanceView })), { ssr: false });
 const UsersView = dynamic(() => import('@/components/users-view').then(m => ({ default: m.UsersView })), { ssr: false });
 const PublicWitnessView = dynamic(() => import('@/components/public-witness-view').then(m => ({ default: m.PublicWitnessView })), { ssr: false });
+const CleaningView = dynamic(() => import('@/components/cleaning-view').then(m => ({ default: m.CleaningView })), { ssr: false });
 
 export default function Home() {
   const { user, loading, signIn } = useAuth();
@@ -107,6 +108,7 @@ export default function Home() {
           {activeTab === 'field' && <FieldReportView onDirtyChange={setFieldDirty} />}
           {activeTab === 'service' && <ServiceView onDirtyChange={setFieldDirty} />}
           {activeTab === 'public_witness' && <PublicWitnessView />}
+          {activeTab === 'cleaning' && <CleaningView />}
           {activeTab === 'prints' && (
             <div className="flex-1 pr-3 overflow-y-auto">
               <PrintsView />
