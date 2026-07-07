@@ -17,6 +17,7 @@ const MONTHS = [
 interface PublisherSummary {
   id: string;
   firstName: string;
+  middleName: string;
   lastName: string;
   status: string;
   groupId: string;
@@ -88,6 +89,7 @@ export function FieldReportView({ onDirtyChange }: FieldReportViewProps) {
         const pubs = snapshot.docs.map(d => ({
           id: d.id,
           firstName: d.data().firstName || '',
+          middleName: d.data().middleName || '',
           lastName: d.data().lastName || '',
           status: d.data().status || 'ativo',
           groupId: d.data().groupId || '',
@@ -280,23 +282,23 @@ export function FieldReportView({ onDirtyChange }: FieldReportViewProps) {
         <div className="bg-[#0B1220]/70 border border-[#1E293B]/60 rounded-2xl overflow-hidden min-w-[700px]">
           {/* Cabeçalho */}
           <div className="flex border-b border-[#1E293B]/60 bg-[#1E293B]/20">
-            <div className="w-44 shrink-0 p-3">
+            <div className="w-[260px] shrink-0 p-3">
               <span className="text-[9px] font-black text-[#64748B] uppercase tracking-widest">Publicador</span>
             </div>
-            <div className="w-20 shrink-0 border-l border-[#1E293B]/40 p-3 text-center">
-              <span className="text-[9px] font-black text-[#64748B] uppercase tracking-widest">Participou</span>
+            <div className="w-16 shrink-0 border-l border-[#1E293B]/40 p-3 text-center">
+              <span className="text-[9px] font-black text-[#64748B] uppercase tracking-widest">Part.</span>
             </div>
-            <div className="w-20 shrink-0 border-l border-[#1E293B]/40 p-3 text-center">
-              <span className="text-[9px] font-black text-[#64748B] uppercase tracking-widest">Estudos</span>
+            <div className="w-16 shrink-0 border-l border-[#1E293B]/40 p-3 text-center">
+              <span className="text-[9px] font-black text-[#64748B] uppercase tracking-widest">Est.</span>
             </div>
-            <div className="w-20 shrink-0 border-l border-[#1E293B]/40 p-3 text-center">
-              <span className="text-[9px] font-black text-[#64748B] uppercase tracking-widest">Auxiliar</span>
+            <div className="w-16 shrink-0 border-l border-[#1E293B]/40 p-3 text-center">
+              <span className="text-[9px] font-black text-[#64748B] uppercase tracking-widest">Aux.</span>
             </div>
             <div className="w-20 shrink-0 border-l border-[#1E293B]/40 p-3 text-center">
               <span className="text-[9px] font-black text-[#64748B] uppercase tracking-widest">Horas</span>
             </div>
-            <div className="flex-1 min-w-[140px] border-l border-[#1E293B]/40 p-3">
-              <span className="text-[9px] font-black text-[#64748B] uppercase tracking-widest">Observação</span>
+            <div className="w-40 shrink-0 border-l border-[#1E293B]/40 p-3">
+              <span className="text-[9px] font-black text-[#64748B] uppercase tracking-widest">Obs</span>
             </div>
           </div>
 
@@ -315,11 +317,11 @@ export function FieldReportView({ onDirtyChange }: FieldReportViewProps) {
             const report = reports[p.id] || { participou: false, estudos: '', auxiliar: false, horas: '', observacao: '' };
             return (
               <div key={p.id} className="flex border-b border-[#1E293B]/30 last:border-b-0 hover:bg-[#1E293B]/5 transition-colors">
-                <div className="w-44 shrink-0 p-2.5 flex items-center">
+                <div className="w-[260px] shrink-0 p-2.5 flex items-center">
                   <div className="h-7 w-7 rounded-lg bg-[#1E293B]/50 flex items-center justify-center text-xs font-bold text-[#94A3B8] shrink-0 mr-2.5">
                     {p.firstName?.charAt(0)?.toUpperCase() || '?'}
                   </div>
-                  <span className="text-[12px] font-bold text-white truncate">{p.firstName} {p.lastName}</span>
+                  <span className="text-[12px] font-bold text-white flex-1 min-w-0">{[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}</span>
                   {p.pioneerType === 'regular' && (
                     <span className="ml-1.5 text-[8px] font-bold text-emerald-500/70 uppercase tracking-wider shrink-0">P</span>
                   )}
@@ -328,7 +330,7 @@ export function FieldReportView({ onDirtyChange }: FieldReportViewProps) {
                   )}
                 </div>
 
-                <div className="w-20 shrink-0 border-l border-[#1E293B]/40 flex items-center justify-center">
+                <div className="w-16 shrink-0 border-l border-[#1E293B]/40 flex items-center justify-center">
                   <button
                     onClick={() => updateReport(p.id, 'participou', !report.participou)}
                     className={`h-8 w-8 rounded-lg flex items-center justify-center transition-all ${
@@ -341,7 +343,7 @@ export function FieldReportView({ onDirtyChange }: FieldReportViewProps) {
                   </button>
                 </div>
 
-                <div className="w-20 shrink-0 border-l border-[#1E293B]/40 flex items-center justify-center">
+                <div className="w-16 shrink-0 border-l border-[#1E293B]/40 flex items-center justify-center">
                   <input
                     type="text"
                     inputMode="numeric"
@@ -356,7 +358,7 @@ export function FieldReportView({ onDirtyChange }: FieldReportViewProps) {
                   />
                 </div>
 
-                <div className="w-20 shrink-0 border-l border-[#1E293B]/40 flex items-center justify-center">
+                <div className="w-16 shrink-0 border-l border-[#1E293B]/40 flex items-center justify-center">
                   <button
                     onClick={() => updateReport(p.id, 'auxiliar', !report.auxiliar)}
                     className={`h-8 w-8 rounded-lg flex items-center justify-center transition-all ${
@@ -387,7 +389,7 @@ export function FieldReportView({ onDirtyChange }: FieldReportViewProps) {
                   />
                 </div>
 
-                <div className="flex-1 min-w-[140px] border-l border-[#1E293B]/40 flex items-center p-2.5">
+                <div className="w-40 shrink-0 border-l border-[#1E293B]/40 flex items-center p-2.5">
                   <input
                     type="text"
                     maxLength={35}
@@ -396,7 +398,7 @@ export function FieldReportView({ onDirtyChange }: FieldReportViewProps) {
                       const v = e.target.value.slice(0, 35);
                       updateReport(p.id, 'observacao', v);
                     }}
-                    placeholder="Observação..."
+                    placeholder="Obs..."
                     className="w-full h-8 bg-[#1E293B]/20 border border-[#1E293B]/40 text-white rounded-lg px-3 text-[11px] font-medium focus:outline-none focus:border-[#0EA5E9] placeholder:text-[#475569]"
                   />
                 </div>
@@ -412,11 +414,11 @@ export function FieldReportView({ onDirtyChange }: FieldReportViewProps) {
               </div>
               {inactivePublishers.map(p => (
                 <div key={p.id} className="flex border-b border-[#1E293B]/20 last:border-b-0 opacity-50 hover:opacity-70 transition-opacity">
-                  <div className="w-44 shrink-0 p-2.5 flex items-center">
+                  <div className="w-[260px] shrink-0 p-2.5 flex items-center">
                     <div className="h-7 w-7 rounded-lg bg-[#1E293B]/30 flex items-center justify-center text-xs font-bold text-[#64748B] shrink-0 mr-2.5">
                       {p.firstName?.charAt(0)?.toUpperCase() || '?'}
                     </div>
-                    <span className="text-[12px] font-bold text-[#64748B] truncate">{p.firstName} {p.lastName}</span>
+                    <span className="text-[12px] font-bold text-[#64748B] truncate">{[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}</span>
                   </div>
                   <div className="flex-1 flex items-center justify-center border-l border-[#1E293B]/20">
                     <span className="text-[10px] text-[#64748B]/50 italic">Inativo</span>

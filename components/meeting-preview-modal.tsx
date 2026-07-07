@@ -70,7 +70,7 @@ function Overlay({ x, y, w, h = 14, value, align = 'left', fontSize = 11, fontWe
   const scale = 794 / 595;
   const left = x * scale;
   const heightVal = h;
-  const top = (842 - y - heightVal + 26.5) * scale;
+  const top = (842 - y - heightVal + 22.5) * scale;
   const width = w * scale;
   const height = heightVal * scale;
 
@@ -215,17 +215,17 @@ function PrintLayout({ midweek, weekend }: { midweek: MidweekPreviewData; weeken
           }}
         >
           {/* Week range */}
-          <Overlay x={420} y={800} w={142} value={midweek.weekRange.toUpperCase() + ' |'} align="right" fontSize={11} />
+          <Overlay x={420} y={799} w={142} value={midweek.weekRange.toUpperCase() + ' |'} align="right" fontSize={11} />
 
           {/* Midweek header */}
-          <Overlay x={81} y={764} w={105} value={midweek.president} />
-          <Overlay x={280} y={764} w={105} value={midweek.openingPrayer} />
-          <Overlay x={472} y={764} w={90} value={midweek.closingPrayer} />
+          <Overlay x={87} y={765} w={105} value={midweek.president} />
+          <Overlay x={286} y={765} w={105} value={midweek.openingPrayer} />
+          <Overlay x={478} y={765.5} w={90} value={midweek.closingPrayer} />
 
           {/* Tesouros */}
-          <Overlay x={312} y={700} w={230} value={midweek.talkSpeaker} />
-          <Overlay x={312} y={675} w={230} value={midweek.gemsSpeaker} />
-          <Overlay x={312} y={651} w={230} value={midweek.bibleReadingReader} />
+          <Overlay x={312} y={702} w={230} value={midweek.talkSpeaker} />
+          <Overlay x={312} y={677} w={230} value={midweek.gemsSpeaker} />
+          <Overlay x={312} y={653} w={230} value={midweek.bibleReadingReader} />
 
           {/* Faça Seu Melhor (Ministry) */}
           {ministeriosSlots.map((slot, i) => {
@@ -245,32 +245,32 @@ function PrintLayout({ midweek, weekend }: { midweek: MidweekPreviewData; weeken
           {/* Nossa Vida Cristã */}
           {activeLife.length === 1 && (
             <>
-              <Overlay x={20} y={409} w={290} value={activeLife[0].theme} fontSize={11} />
-              <Overlay x={309} y={408} w={230} value={activeLife[0].speaker} fontSize={11} />
+              <Overlay x={20} y={411} w={290} value={activeLife[0].theme} fontSize={11} />
+              <Overlay x={309} y={410} w={230} value={activeLife[0].speaker} fontSize={11} />
             </>
           )}
           {activeLife.length === 2 && (
             <>
-              <Overlay x={20} y={415} w={290} value={activeLife[0].theme} fontSize={11} />
-              <Overlay x={309} y={415} w={230} value={activeLife[0].speaker} fontSize={11} />
-              <Overlay x={20} y={399} w={290} value={activeLife[1].theme} fontSize={11} />
-              <Overlay x={309} y={399} w={230} value={activeLife[1].speaker} fontSize={11} />
+              <Overlay x={20} y={417} w={290} value={activeLife[0].theme} fontSize={11} />
+              <Overlay x={309} y={417} w={230} value={activeLife[0].speaker} fontSize={11} />
+              <Overlay x={20} y={401} w={290} value={activeLife[1].theme} fontSize={11} />
+              <Overlay x={309} y={401} w={230} value={activeLife[1].speaker} fontSize={11} />
             </>
           )}
           {activeLife.length === 3 && (
             <>
-              <Overlay x={20} y={419} w={290} value={activeLife[0].theme} fontSize={11} />
-              <Overlay x={309} y={419} w={230} value={activeLife[0].speaker} fontSize={11} />
-              <Overlay x={20} y={406} w={290} value={activeLife[1].theme} fontSize={11} />
-              <Overlay x={309} y={406} w={230} value={activeLife[1].speaker} fontSize={11} />
-              <Overlay x={20} y={393} w={290} value={activeLife[2].theme} fontSize={11} />
-              <Overlay x={309} y={393} w={230} value={activeLife[2].speaker} fontSize={11} />
+              <Overlay x={20} y={421} w={290} value={activeLife[0].theme} fontSize={11} />
+              <Overlay x={309} y={421} w={230} value={activeLife[0].speaker} fontSize={11} />
+              <Overlay x={20} y={408} w={290} value={activeLife[1].theme} fontSize={11} />
+              <Overlay x={309} y={408} w={230} value={activeLife[1].speaker} fontSize={11} />
+              <Overlay x={20} y={395} w={290} value={activeLife[2].theme} fontSize={11} />
+              <Overlay x={309} y={395} w={230} value={activeLife[2].speaker} fontSize={11} />
             </>
           )}
 
           {/* Congregation Bible Study (CBS) */}
-          <Overlay x={288} y={372} w={110} value={midweek.cbsConductor} />
-          <Overlay x={455} y={372} w={110} value={midweek.cbsReader} />
+          <Overlay x={288} y={371.5} w={110} value={midweek.cbsConductor} />
+          <Overlay x={453} y={371.5} w={110} value={midweek.cbsReader} />
 
           {/* Mechanical parts (Midweek) */}
           <Overlay x={130} y={322} w={170} value={midweek.mechanicalIndicador1} />
@@ -281,9 +281,9 @@ function PrintLayout({ midweek, weekend }: { midweek: MidweekPreviewData; weeken
           <Overlay x={436} y={273} w={120} value={midweek.mechanicalPalco} />
 
           {/* FIM DE SEMANA */}
-          <Overlay x={95} y={196} w={90} value={weekend.president} />
-          <Overlay x={282} y={196} w={100} value={weekend.openingPrayer} />
-          <Overlay x={474} y={196} w={100} value={weekend.closingPrayer} />
+          <Overlay x={97} y={195} w={90} value={weekend.president} />
+          <Overlay x={284} y={195} w={100} value={weekend.openingPrayer} />
+          <Overlay x={476} y={195} w={100} value={weekend.closingPrayer} />
 
           {/* Talk theme & speaker */}
           <Overlay x={18} y={171} w={380} value={weekend.talkTheme} />
@@ -291,7 +291,7 @@ function PrintLayout({ midweek, weekend }: { midweek: MidweekPreviewData; weeken
 
           {/* Watchtower Study */}
           <Overlay x={288} y={145} w={110} value={weekend.watchtowerConductor} />
-          <Overlay x={456} y={145} w={110} value={weekend.watchtowerReader} />
+          <Overlay x={447} y={145} w={110} value={weekend.watchtowerReader} />
 
           {/* Mechanical parts (Weekend) */}
           <Overlay x={130} y={97} w={170} value={weekend.mechanicalIndicador1} />
