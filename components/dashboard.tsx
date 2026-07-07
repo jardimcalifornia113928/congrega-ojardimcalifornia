@@ -26,6 +26,7 @@ interface DashboardProps {
 interface PublisherSummary {
   id: string;
   firstName: string;
+  middleName: string;
   lastName: string;
   status: string;
   groupId: string;
@@ -84,6 +85,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
         const pubs = snapshot.docs.map((d: any) => ({
           id: d.id,
           firstName: d.data().firstName || '',
+          middleName: d.data().middleName || '',
           lastName: d.data().lastName || '',
           status: d.data().status || 'ativo',
           groupId: d.data().groupId || '',
@@ -176,14 +178,14 @@ export function Dashboard({ onNavigate }: DashboardProps) {
         const debugGroups = groups.map(g => {
           const gp = activePubs.filter(p => p.groupId === g.id);
           const gm = gp.filter(p => missing.has(p.id));
-          return { group: g.name, total: gp.length, missing: gm.length, names: gm.map(p => `${p.firstName} ${p.lastName}`) };
+          return { group: g.name, total: gp.length, missing: gm.length, names: gm.map(p => [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')) };
         });
         console.table(debugGroups);
         const ungrouped = activePubs.filter(p => !p.groupId || !groups.some(g => g.id === p.groupId));
         if (ungrouped.length > 0) {
           const ungroupedMissing = ungrouped.filter(p => missing.has(p.id));
           console.log(`Sem grupo: ${ungrouped.length} ativos, ${ungroupedMissing.length} faltam`);
-          console.log('Nomes:', ungrouped.map(p => `${p.firstName} ${p.lastName}`));
+          console.log('Nomes:', ungrouped.map(p => [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')));
         }
         console.log('=======================');
       } catch (error) {
@@ -354,9 +356,9 @@ export function Dashboard({ onNavigate }: DashboardProps) {
       });
       const pub = publishers.find(p => p.id === publisherId);
       if (pub?.pioneerType === 'regular') {
-        toast.info(`${pub.firstName} ${pub.lastName} é pioneiro regular — lembre-se de preencher horas e estudos no relatório completo!`, { duration: 5000 });
+        toast.info(`${[pub.firstName, pub.middleName, pub.lastName].filter(Boolean).join(' ')} é pioneiro regular — lembre-se de preencher horas e estudos no relatório completo!`, { duration: 5000 });
       } else {
-        toast.success(`${pub?.firstName} ${pub?.lastName} lançado com participação!`);
+        toast.success(`${[pub?.firstName, pub?.middleName, pub?.lastName].filter(Boolean).join(' ')} lançado com participação!`);
       }
     } catch (error) {
       console.error("Quick checkin error:", error);
@@ -487,7 +489,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                     const supPhone = sup?.phone?.replace(/\D/g, '') || '';
                     const message = encodeURIComponent(
                       `Olá, segue a lista de publicadores do grupo ${group.name} que ainda não lançaram o relatório de campo de ${selectedMonthId ? getMonthLabel(selectedMonthId) : currentMonthLabel}:\n\n` +
-                      pubs.map(p => `• ${p.firstName} ${p.lastName}`).join('\n') +
+                      pubs.map(p => `• ${[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}`).join('\n') +
                       `\n\nPor favor, nos ajudem a regularizar esses relatórios. Obrigado!`
                     );
                     const waLink = supPhone ? `https://wa.me/55${supPhone}?text=${message}` : '#';
@@ -504,7 +506,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                               target="_blank"
                               rel="noopener noreferrer"
                               className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors shrink-0 ml-2"
-                              title={`Enviar WhatsApp para ${sup?.firstName} ${sup?.lastName}`}
+                              title={`Enviar WhatsApp para ${[sup?.firstName, sup?.middleName, sup?.lastName].filter(Boolean).join(' ')}`}
                             >
                               <MessageSquare className="h-3 w-3" />
                               {sup?.firstName}
@@ -528,7 +530,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                                   {p.firstName?.charAt(0)?.toUpperCase() || '?'}
                                 </div>
                               )}
-                              <span className="truncate flex-1">{p.firstName} {p.lastName}</span>
+                              <span className="truncate flex-1">{[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}</span>
                               {p.pioneerType === 'regular' && (
                                 <span className="text-[8px] font-bold text-emerald-500/70 uppercase tracking-wider shrink-0">P</span>
                               )}
