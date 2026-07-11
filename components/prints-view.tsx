@@ -478,7 +478,7 @@ export function PrintsView() {
                         .filter((p: any) => p.status === 'ativo')
                         .sort((a: any, b: any) => (a.firstName || '').localeCompare(b.firstName || ''))
                         .map((p: any) => (
-                          <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>
+                          <option key={p.id} value={p.id}>{[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}</option>
                         ))}
                     </select>
                   </div>

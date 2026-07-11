@@ -91,7 +91,7 @@ function Overlay({ x, y, w, h = 14, value, align = 'left', fontSize = 11, fontWe
         textAlign: align,
         fontSize: `${fontSize * scale}px`,
         fontWeight: fontWeight,
-        color: '#111827',
+        color: '#000000',
         paddingLeft: align === 'left' ? '3px' : '0px',
         paddingRight: align === 'right' ? '3px' : '0px',
         lineHeight: 1.1,
@@ -366,7 +366,7 @@ export function MeetingPreviewModal({ midweek, weekend, onClose }: Props) {
         const fontWeight = htmlEl.style.fontWeight || 'bold';
 
         ctx.font = `${fontWeight === 'bold' ? 'bold ' : ''}${fontSize * sx}px Arial, Helvetica, sans-serif`;
-        ctx.fillStyle = '#111827';
+        ctx.fillStyle = '#000000';
         ctx.textBaseline = 'middle';
 
         const padding = 3 * sx;

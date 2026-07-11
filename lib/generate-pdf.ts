@@ -84,7 +84,7 @@ export async function generateMeetingPdf(
 
   // ── Colors ──────────────────────────────────────────────────────────────
   const BLACK    : [number,number,number] = [0,   0,   0];
-  const GRAY_700 : [number,number,number] = [60,  60,  60];
+  const DARK     : [number,number,number] = [30,  30,  30];
   const GRAY_400 : [number,number,number] = [120, 120, 120];
   const WHITE    : [number,number,number] = [255, 255, 255];
   const AMBER    : [number,number,number] = [180, 120,  10]; // Tesouros
@@ -96,7 +96,7 @@ export async function generateMeetingPdf(
   // ── Helpers ──────────────────────────────────────────────────────────────
   let y = 0;
 
-  const setFont = (style: 'normal'|'bold', size: number, color: [number,number,number] = BLACK) => {
+  const setFont = (style: 'normal'|'bold', size: number, color: [number,number,number] = [30,30,30]) => {
     pdf.setFont('helvetica', style);
     pdf.setFontSize(size);
     pdf.setTextColor(...color);
@@ -115,13 +115,13 @@ export async function generateMeetingPdf(
 
   /** Caixa de campo: label à esquerda, valor à direita com linha pontilhada */
   const fieldRow = (label: string, value: string, fy: number, lw = 60) => {
-    setFont('bold', 7, GRAY_700);
+    setFont('bold', 7, DARK);
     pdf.text(label, mL, fy);
     const xVal = mL + lw;
     const lineWidth = cW - lw;
     // underline for value
     line(xVal, fy + 0.5, xVal + lineWidth, fy + 0.5, [180,180,180], 0.2);
-    setFont('normal', 7, BLACK);
+    setFont('normal', 7, DARK);
     if (value) {
       pdf.text(value, xVal + 1, fy);
     }
@@ -137,16 +137,16 @@ export async function generateMeetingPdf(
     const col2X = mL + col1W + 4;
     const col2W = cW - col1W - 4;
 
-    setFont('bold', 7, GRAY_700);
+    setFont('bold', 7, DARK);
     pdf.text(l1, mL, fy);
     line(mL + 22, fy + 0.5, mL + col1W, fy + 0.5, [180,180,180], 0.2);
-    setFont('normal', 7, BLACK);
+    setFont('normal', 7, DARK);
     if (v1) pdf.text(v1, mL + 23, fy);
 
-    setFont('bold', 7, GRAY_700);
+    setFont('bold', 7, DARK);
     pdf.text(l2, col2X, fy);
     line(col2X + 22, fy + 0.5, col2X + col2W, fy + 0.5, [180,180,180], 0.2);
-    setFont('normal', 7, BLACK);
+    setFont('normal', 7, DARK);
     if (v2) pdf.text(v2, col2X + 23, fy);
   };
 
@@ -163,7 +163,7 @@ export async function generateMeetingPdf(
   /** Sub-cabeçalho cinza "PARTES MECÂNICAS" */
   const mechHeader = (sy: number): number => {
     rect(mL, sy, cW, 4.5, MECH_BG);
-    setFont('bold', 7.5, GRAY_700);
+    setFont('bold', 7.5, DARK);
     pdf.text('PARTES MECÂNICAS DA REUNIÃO', mL + 2, sy + 3.2);
     return sy + 4.5;
   };
@@ -180,9 +180,9 @@ export async function generateMeetingPdf(
   line(mL, y + 1.5, W - mR, y + 1.5, BLACK, 0.4);
   y += 3;
 
-  setFont('normal', 7, GRAY_700);
+  setFont('normal', 7, DARK);
   pdf.text('DESIGNAÇÕES DA REUNIÃO', mL, y);
-  setFont('normal', 7, GRAY_700);
+  setFont('normal', 7, DARK);
   pdf.text(CONGREGATION, W - mR, y, { align: 'right' });
   y += 2;
   line(mL, y, W - mR, y, [180,180,180], 0.2);
@@ -199,22 +199,22 @@ export async function generateMeetingPdf(
   // ═══════════════════════════════════════════════════════════════════════
   y += 1.5;
   const thirdW = cW / 3;
-  setFont('bold', 6.5, GRAY_700);
+  setFont('bold', 6.5, DARK);
   const presidente = val(midweek.president);
   const oracaoInicial = val(midweek.openingPrayer);
   const oracaoFinal = val(midweek.closingPrayer);
 
-  setFont('bold', 7, GRAY_700);
+  setFont('bold', 7, DARK);
   pdf.text('/ PRESIDENTE-', mL, y);
-  setFont('normal', 7, BLACK);
+  setFont('normal', 7, DARK);
   pdf.text(presidente, mL + 21, y);
-  setFont('bold', 7, GRAY_700);
+  setFont('bold', 7, DARK);
   pdf.text('/ ORAÇÃO INICIAL-', mL + thirdW, y);
-  setFont('normal', 7, BLACK);
+  setFont('normal', 7, DARK);
   pdf.text(oracaoInicial, mL + thirdW + 27, y);
-  setFont('bold', 7, GRAY_700);
+  setFont('bold', 7, DARK);
   pdf.text('/ ORAÇÃO FINAL-', mL + thirdW * 2, y);
-  setFont('normal', 7, BLACK);
+  setFont('normal', 7, DARK);
   pdf.text(oracaoFinal, mL + thirdW * 2 + 25, y);
   y += ROW;
 
@@ -232,9 +232,9 @@ export async function generateMeetingPdf(
   ];
 
   for (const item of tesourosItems) {
-    setFont('normal', 7, BLACK);
+    setFont('normal', 7, DARK);
     pdf.text(item.label, mL, y);
-    setFont('bold', 7, GRAY_700);
+    setFont('bold', 7, DARK);
     pdf.text(item.person, W - mR, y, { align: 'right' });
     line(mL, y + 1, W - mR, y + 1, [200,200,200], 0.15);
     y += ROW;
@@ -261,7 +261,7 @@ export async function generateMeetingPdf(
     const assistText = val(item.assistant);
     const helper2Text = val(item.helper2);
 
-    setFont('normal', 7, BLACK);
+    setFont('normal', 7, DARK);
     pdf.text(`${item.num}- ${themeText}`, mL, y);
 
     // right side: designado / ajudante(s)
@@ -269,7 +269,7 @@ export async function generateMeetingPdf(
     if (assistText) rightText += ' / ' + assistText;
     if (helper2Text) rightText += ' / ' + helper2Text;
 
-    setFont('bold', 7, GRAY_700);
+    setFont('bold', 7, DARK);
     pdf.text(rightText, W - mR, y, { align: 'right' });
     line(mL, y + 1, W - mR, y + 1, [200,200,200], 0.15);
     y += ROW;
@@ -289,9 +289,9 @@ export async function generateMeetingPdf(
   ];
 
   for (const item of vidaCristaItems) {
-    setFont('normal', 7, BLACK);
+    setFont('normal', 7, DARK);
     pdf.text(item.label, mL, y);
-    setFont('bold', 7, GRAY_700);
+    setFont('bold', 7, DARK);
     pdf.text(item.person, W - mR, y, { align: 'right' });
     line(mL, y + 1, W - mR, y + 1, [200,200,200], 0.15);
     y += ROW;
@@ -301,15 +301,15 @@ export async function generateMeetingPdf(
   const cbs = '10- ESTUDO BÍBLICO';
   const cbsDir = val(midweek.cbsConductor);
   const cbsLei = val(midweek.cbsReader);
-  setFont('normal', 7, BLACK);
+  setFont('normal', 7, DARK);
   pdf.text(cbs, mL, y);
-  setFont('bold', 6.5, GRAY_700);
+  setFont('bold', 6.5, DARK);
   pdf.text('DIRIGENTE', mL + 50, y);
-  setFont('normal', 7, BLACK);
+  setFont('normal', 7, DARK);
   pdf.text(cbsDir, mL + 65, y);
-  setFont('bold', 6.5, GRAY_700);
+  setFont('bold', 6.5, DARK);
   pdf.text('LEITOR', mL + 100, y);
-  setFont('normal', 7, BLACK);
+  setFont('normal', 7, DARK);
   pdf.text(cbsLei, mL + 112, y);
   line(mL, y + 1, W - mR, y + 1, [200,200,200], 0.15);
   y += ROW + 1;
@@ -324,16 +324,16 @@ export async function generateMeetingPdf(
   const mechColR = mL + mechW + 4;
 
   const mechRow = (l1: string, v1: string, l2: string, v2: string) => {
-    setFont('bold', 7, GRAY_700);
+    setFont('bold', 7, DARK);
     pdf.text(l1, mL, y);
     line(mL + 22, y + 0.5, mL + mechW, y + 0.5, [180,180,180], 0.2);
-    setFont('normal', 7, BLACK);
+    setFont('normal', 7, DARK);
     if (v1) pdf.text(v1, mL + 23, y);
 
-    setFont('bold', 7, GRAY_700);
+    setFont('bold', 7, DARK);
     pdf.text(l2, mechColR, y);
     line(mechColR + 22, y + 0.5, mechColR + mechW, y + 0.5, [180,180,180], 0.2);
-    setFont('normal', 7, BLACK);
+    setFont('normal', 7, DARK);
     if (v2) pdf.text(v2, mechColR + 23, y);
     y += ROW;
   };
@@ -357,17 +357,17 @@ export async function generateMeetingPdf(
   const wPresident = val(weekend.president);
   const wOracaoI   = val(weekend.openingPrayer);
   const wOracaoF   = val(weekend.closingPrayer);
-  setFont('bold', 7, GRAY_700);
+  setFont('bold', 7, DARK);
   pdf.text('PRESIDENTE -', mL, y);
-  setFont('normal', 7, BLACK);
+  setFont('normal', 7, DARK);
   pdf.text(wPresident, mL + 21, y);
-  setFont('bold', 7, GRAY_700);
+  setFont('bold', 7, DARK);
   pdf.text('/ ORAÇÃO INICIAL -', mL + thirdW, y);
-  setFont('normal', 7, BLACK);
+  setFont('normal', 7, DARK);
   pdf.text(wOracaoI, mL + thirdW + 29, y);
-  setFont('bold', 7, GRAY_700);
+  setFont('bold', 7, DARK);
   pdf.text('/ ORAÇÃO FINAL -', mL + thirdW * 2, y);
-  setFont('normal', 7, BLACK);
+  setFont('normal', 7, DARK);
   pdf.text(wOracaoF, mL + thirdW * 2 + 27, y);
   line(mL, y + 1, W - mR, y + 1, [200,200,200], 0.15);
   y += ROW;
@@ -375,11 +375,11 @@ export async function generateMeetingPdf(
   // Tema do discurso / Orador
   const talkTheme = val(weekend.talkTheme);
   const speaker = val(weekend.localSpeaker) || val(weekend.visitingSpeaker);
-  setFont('normal', 7, BLACK);
+  setFont('normal', 7, DARK);
   pdf.text(talkTheme, mL, y);
-  setFont('bold', 7, GRAY_700);
+  setFont('bold', 7, DARK);
   pdf.text('ORADOR -', W - mR - 50, y);
-  setFont('normal', 7, BLACK);
+  setFont('normal', 7, DARK);
   pdf.text(speaker, W - mR - 50 + 14, y);
   line(mL, y + 1, W - mR, y + 1, [200,200,200], 0.15);
   y += ROW;
@@ -387,15 +387,15 @@ export async function generateMeetingPdf(
   // Estudo A Sentinela
   const wCond = val(weekend.watchtowerConductor);
   const wRead = val(weekend.watchtowerReader);
-  setFont('bold', 7, GRAY_700);
+  setFont('bold', 7, DARK);
   pdf.text('ESTUDO A SENTINELA', mL, y);
-  setFont('bold', 6.5, GRAY_700);
+  setFont('bold', 6.5, DARK);
   pdf.text('DIRIGENTE', mL + 36, y);
-  setFont('normal', 7, BLACK);
+  setFont('normal', 7, DARK);
   pdf.text(wCond, mL + 51, y);
-  setFont('bold', 6.5, GRAY_700);
+  setFont('bold', 6.5, DARK);
   pdf.text('LEITOR', mL + 90, y);
-  setFont('normal', 7, BLACK);
+  setFont('normal', 7, DARK);
   pdf.text(wRead, mL + 102, y);
   line(mL, y + 1, W - mR, y + 1, [200,200,200], 0.15);
   y += ROW + 1;

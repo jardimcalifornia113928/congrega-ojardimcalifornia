@@ -14,6 +14,7 @@ import { generateCarrinhoPDF, openPDFForPrint, downloadPDF as downloadPDFBlob } 
 interface Publisher {
   id: string;
   firstName: string;
+  middleName?: string;
   lastName: string;
   designations: string[];
 }
@@ -101,9 +102,9 @@ function CartTable({ data, horarios, cartKey, filteredPublishers, updateDesignad
                         className="w-full px-1 py-1 text-[10px] bg-[#1E293B]/50 border border-[#1E293B]/60 rounded text-white focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]"
                       >
                         <option value="">---</option>
-                        {filteredPublishers.map(p => (
-                          <option key={p.id} value={`${p.firstName} ${p.lastName}`}>
-                            {p.firstName} {p.lastName}
+                        {filteredPublishers.map((p: any) => (
+                          <option key={p.id} value={[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}>
+                            {[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}
                           </option>
                         ))}
                       </select>
@@ -171,6 +172,7 @@ export function PublicWitnessView() {
         pubs.push({
           id: doc.id,
           firstName: data.firstName || '',
+          middleName: data.middleName || '',
           lastName: data.lastName || '',
           designations: data.designations || [],
         });
@@ -282,9 +284,9 @@ export function PublicWitnessView() {
     }
   };
 
-  const filteredPublishers = publishers
+  const filteredPublishers: Publisher[] = publishers
     .filter(p => p.designations?.includes("Serviço de campo::Testemunho público"))
-    .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`));
+    .sort((a, b) => [a.firstName, a.middleName, a.lastName].filter(Boolean).join(' ').localeCompare([b.firstName, b.middleName, b.lastName].filter(Boolean).join(' ')));
 
   const horarios = [
     { key: 'manha' as const, label: '12:00-14:00' },

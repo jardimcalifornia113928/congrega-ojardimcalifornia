@@ -13,6 +13,7 @@ import { ServicePrintView } from './service-print-view';
 interface Publisher {
   id: string;
   firstName: string;
+  middleName?: string;
   lastName: string;
   designations: string[];
   groupId: string;
@@ -61,18 +62,18 @@ function PublisherInput({
   const filteredPubs = publishers
     .filter(p => {
       if (!p || !p.firstName || !p.lastName) return false;
-      const fullName = `${p.firstName} ${p.lastName}`.toLowerCase();
+      const fullName = [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ').toLowerCase();
       const matchesSearch = fullName.includes((search || "").toLowerCase());
       const hasDesignation = p.designations?.includes("Serviço de campo::Super. de Grupo");
       return matchesSearch && hasDesignation;
     })
     .sort((a, b) => {
-      const nameA = `${a.firstName} ${a.lastName}`.toLowerCase();
-      const nameB = `${b.firstName} ${b.lastName}`.toLowerCase();
+      const nameA = [a.firstName, a.middleName, a.lastName].filter(Boolean).join(' ').toLowerCase();
+      const nameB = [b.firstName, b.middleName, b.lastName].filter(Boolean).join(' ').toLowerCase();
       return nameA.localeCompare(nameB);
     });
 
-  const selectedPub = publishers.find(p => `${p.firstName} ${p.lastName}` === value);
+  const selectedPub = publishers.find(p => [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ') === value);
 
   return (
     <div ref={containerRef} className="relative w-full">
@@ -81,7 +82,7 @@ function PublisherInput({
         onClick={() => setIsOpen(!isOpen)}
       >
         <span className={`text-sm ${selectedPub ? 'text-gray-900' : 'text-gray-400'}`}>
-          {selectedPub ? `${selectedPub.firstName} ${selectedPub.lastName}` : placeholder}
+          {selectedPub ? [selectedPub.firstName, selectedPub.middleName, selectedPub.lastName].filter(Boolean).join(' ') : placeholder}
         </span>
         <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </div>
@@ -120,13 +121,13 @@ function PublisherInput({
                   key={p.id}
                   className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-blue-50"
                   onClick={() => {
-                    onChange(`${p.firstName} ${p.lastName}`);
+                    onChange([p.firstName, p.middleName, p.lastName].filter(Boolean).join(' '));
                     setIsOpen(false);
                     setSearch("");
                   }}
                 >
                   <User className="h-4 w-4 text-gray-400" />
-                  <span>{p.firstName} {p.lastName}</span>
+                  <span>{[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}</span>
                 </div>
               ))
             )}
@@ -243,6 +244,7 @@ export function ServiceView({ onDirtyChange }: ServiceViewProps) {
         pubs.push({
           id: doc.id,
           firstName: data.firstName || '',
+          middleName: data.middleName || '',
           lastName: data.lastName || '',
           designations: data.designations || [],
           groupId: data.groupId || '',
@@ -524,10 +526,10 @@ export function ServiceView({ onDirtyChange }: ServiceViewProps) {
                         <option value="">Selecionar...</option>
                         {publishers
                           .filter(p => p.designations?.includes("Serviço de campo::Saída de campo"))
-                          .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`))
+                          .sort((a, b) => [a.firstName, a.middleName, a.lastName].filter(Boolean).join(' ').localeCompare([b.firstName, b.middleName, b.lastName].filter(Boolean).join(' ')))
                           .map(p => (
-                            <option key={p.id} value={`${p.firstName} ${p.lastName}`}>
-                              {p.firstName} {p.lastName}
+                            <option key={p.id} value={[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}>
+                              {[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}
                             </option>
                           ))}
                       </select>
@@ -541,10 +543,10 @@ export function ServiceView({ onDirtyChange }: ServiceViewProps) {
                         <option value="">Selecionar...</option>
                         {publishers
                           .filter(p => p.designations?.includes("Serviço de campo::Dirigente de campo"))
-                          .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`))
+                          .sort((a, b) => [a.firstName, a.middleName, a.lastName].filter(Boolean).join(' ').localeCompare([b.firstName, b.middleName, b.lastName].filter(Boolean).join(' ')))
                           .map(p => (
-                            <option key={p.id} value={`${p.firstName} ${p.lastName}`}>
-                              {p.firstName} {p.lastName}
+                            <option key={p.id} value={[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}>
+                              {[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}
                             </option>
                           ))}
                       </select>
@@ -599,10 +601,10 @@ export function ServiceView({ onDirtyChange }: ServiceViewProps) {
                         <option value="">Selecionar...</option>
                         {publishers
                           .filter(p => p.designations?.includes("Serviço de campo::Saída de campo"))
-                          .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`))
+                          .sort((a, b) => [a.firstName, a.middleName, a.lastName].filter(Boolean).join(' ').localeCompare([b.firstName, b.middleName, b.lastName].filter(Boolean).join(' ')))
                           .map(p => (
-                            <option key={p.id} value={`${p.firstName} ${p.lastName}`}>
-                              {p.firstName} {p.lastName}
+                            <option key={p.id} value={[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}>
+                              {[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}
                             </option>
                           ))}
                       </select>
@@ -616,10 +618,10 @@ export function ServiceView({ onDirtyChange }: ServiceViewProps) {
                         <option value="">Selecionar...</option>
                         {publishers
                           .filter(p => p.designations?.includes("Serviço de campo::Dirigente de campo"))
-                          .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`))
+                          .sort((a, b) => [a.firstName, a.middleName, a.lastName].filter(Boolean).join(' ').localeCompare([b.firstName, b.middleName, b.lastName].filter(Boolean).join(' ')))
                           .map(p => (
-                            <option key={p.id} value={`${p.firstName} ${p.lastName}`}>
-                              {p.firstName} {p.lastName}
+                            <option key={p.id} value={[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}>
+                              {[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}
                             </option>
                           ))}
                       </select>
@@ -683,10 +685,10 @@ export function ServiceView({ onDirtyChange }: ServiceViewProps) {
                               <option value="">Selecionar...</option>
                               {publishers
                                 .filter(p => p.designations?.includes("Serviço de campo::Saída de campo"))
-                                .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`))
+                                .sort((a, b) => [a.firstName, a.middleName, a.lastName].filter(Boolean).join(' ').localeCompare([b.firstName, b.middleName, b.lastName].filter(Boolean).join(' ')))
                                 .map(p => (
-                                  <option key={p.id} value={`${p.firstName} ${p.lastName}`}>
-                                    {p.firstName} {p.lastName}
+                                  <option key={p.id} value={[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}>
+                                    {[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}
                                   </option>
                                 ))}
                             </select>
@@ -700,10 +702,10 @@ export function ServiceView({ onDirtyChange }: ServiceViewProps) {
                               <option value="">Selecionar...</option>
                               {publishers
                                 .filter(p => p.designations?.includes("Serviço de campo::Dirigente de campo"))
-                                .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`))
+                                .sort((a, b) => [a.firstName, a.middleName, a.lastName].filter(Boolean).join(' ').localeCompare([b.firstName, b.middleName, b.lastName].filter(Boolean).join(' ')))
                                 .map(p => (
-                                  <option key={p.id} value={`${p.firstName} ${p.lastName}`}>
-                                    {p.firstName} {p.lastName}
+                                  <option key={p.id} value={[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}>
+                                    {[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}
                                   </option>
                                 ))}
                             </select>

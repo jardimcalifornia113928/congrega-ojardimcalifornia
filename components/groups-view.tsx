@@ -330,8 +330,8 @@ export function GroupsView() {
                         const sup = gp.find((p: any) => p.designations?.includes("Serviço de campo::Super. de Grupo"));
                         const aux = gp.find((p: any) => p.designations?.includes("Serviço de campo::Aux. Super. de Grupo"));
                         return <>
-                          <div className="flex items-center gap-2 text-[#0EA5E9]"><Shield className="h-3.5 w-3.5" /><p className="text-[10px] font-black uppercase tracking-widest">Super.: {sup ? `${sup.firstName} ${sup.lastName}` : "Ninguém designado"}</p></div>
-                          <div className="flex items-center gap-2 text-[#94A3B8]"><UserPlus className="h-3.5 w-3.5" /><p className="text-[10px] font-black uppercase tracking-widest">Aux.: {aux ? `${aux.firstName} ${aux.lastName}` : "Ninguém designado"}</p></div>
+                          <div className="flex items-center gap-2 text-[#0EA5E9]"><Shield className="h-3.5 w-3.5" /><p className="text-[10px] font-black uppercase tracking-widest">Super.: {sup ? [sup.firstName, sup.middleName, sup.lastName].filter(Boolean).join(' ') : "Ninguém designado"}</p></div>
+                          <div className="flex items-center gap-2 text-[#94A3B8]"><UserPlus className="h-3.5 w-3.5" /><p className="text-[10px] font-black uppercase tracking-widest">Aux.: {aux ? [aux.firstName, aux.middleName, aux.lastName].filter(Boolean).join(' ') : "Ninguém designado"}</p></div>
                         </>;
                       })()}
                     </div>
@@ -341,7 +341,7 @@ export function GroupsView() {
                             <div className="h-5 w-5 rounded-md bg-[#1E293B]/50 flex items-center justify-center text-[9px] font-bold text-[#64748B] shrink-0">
                               {p.firstName?.charAt(0)?.toUpperCase() || '?'}
                             </div>
-                            <span className="truncate">{p.firstName} {p.lastName}</span>
+                            <span className="truncate">{[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}</span>
                           </div>
                        ))}
                        {publishers.filter((p: any) => p.groupId === group.id).length === 0 && (
@@ -371,7 +371,7 @@ export function GroupsView() {
                       <div className="h-5 w-5 rounded-md bg-[#1E293B]/50 flex items-center justify-center text-[9px] font-bold text-[#64748B] shrink-0">
                         {p.firstName?.charAt(0)?.toUpperCase() || '?'}
                       </div>
-                      <span className="truncate">{p.firstName} {p.lastName}</span>
+                      <span className="truncate">{[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}</span>
                     </div>
                   ))}
                 </div>

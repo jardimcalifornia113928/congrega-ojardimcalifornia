@@ -206,7 +206,7 @@ export function FieldReportView({ onDirtyChange }: FieldReportViewProps) {
     if (selectedGroup !== 'all' && p.groupId !== selectedGroup) return false;
     if (!search) return true;
     const q = search.toLowerCase();
-    return `${p.firstName} ${p.lastName}`.toLowerCase().includes(q);
+    return [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ').toLowerCase().includes(q);
   });
 
   const activePublishers = filteredPublishers.filter(p => p.status === 'ativo');

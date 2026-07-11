@@ -82,7 +82,7 @@ function PublisherInput({
   const filteredPubs = publishers
     .filter(p => {
       if (!p || !p.firstName || !p.lastName) return false;
-      const fullName = `${p.firstName} ${p.lastName}`.toLowerCase();
+      const fullName = [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ').toLowerCase();
       const matchesSearch = fullName.includes((search || "").toLowerCase());
       const hasDesignation = designationKey ? p.designations?.includes(designationKey) : false;
       return matchesSearch && hasDesignation;
@@ -126,7 +126,7 @@ function PublisherInput({
           <div className="p-1">
             <div className="px-2 py-1 text-[9px] font-black text-[#0EA5E9] uppercase tracking-wider">{designationKey || roleName}</div>
             {filteredPubs.map(p => {
-              const name = `${p.firstName} ${p.lastName}`;
+              const name = [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ');
               return (
                 <button
                   key={p.id}
