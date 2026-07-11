@@ -321,7 +321,7 @@ export function PublishersView() {
     }
   };
 
-  const hoursGoal = 850;
+      const hoursGoal = 600;
   const currentTotalHours = Object.values(s21Data).reduce((sum, r) => sum + (parseInt(r.horas, 10) || 0), 0);
   const remainingHours = hoursGoal - currentTotalHours;
 
