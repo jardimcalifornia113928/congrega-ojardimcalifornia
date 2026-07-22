@@ -3,7 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/components/auth-provider';
-import { LogIn, Loader2 } from 'lucide-react';
+import { LogIn, Loader2, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sidebar } from '@/components/sidebar';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -25,11 +25,13 @@ const CleaningView = dynamic(() => import('@/components/cleaning-view').then(m =
 export default function Home() {
   const { user, loading, signIn } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [pendingTab, setPendingTab] = useState<string | null>(null);
   const [showNavConfirm, setShowNavConfirm] = useState(false);
   const [fieldDirty, setFieldDirty] = useState(false);
 
   const handleNavigate = useCallback((tab: string) => {
+    setMobileMenuOpen(false);
     if (activeTab === 'field' && tab !== 'field' && fieldDirty) {
       setPendingTab(tab);
       setShowNavConfirm(true);
@@ -76,8 +78,21 @@ export default function Home() {
 
   return (
     <div className="flex h-screen bg-[#050B14] overflow-hidden">
-      <Sidebar activeTab={activeTab} onNavigate={handleNavigate} />
-      <main className="flex-1 flex flex-col overflow-hidden min-h-0 p-6 lg:p-8">
+      <Sidebar activeTab={activeTab} onNavigate={handleNavigate} isMobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} />
+      <main className="flex-1 flex flex-col overflow-hidden min-h-0">
+        <div className="sticky top-0 z-30 lg:hidden flex items-center gap-2 px-4 py-3 border-b border-[#1E293B] bg-[#050B14]">
+          <button
+            onClick={() => setMobileMenuOpen(prev => !prev)}
+            className="h-9 w-9 rounded-lg bg-[#1E293B] flex items-center justify-center text-[#94A3B8] hover:text-white transition-colors"
+          >
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="h-7 w-7 rounded-lg bg-[#0EA5E9] flex items-center justify-center text-white font-bold text-xs">C</div>
+            <span className="text-sm font-semibold text-white">Jardim Califórnia</span>
+          </div>
+        </div>
+        <div className="flex-1 overflow-hidden p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col min-h-0">
           {activeTab === 'dashboard' && (
             <div className="flex-1 pr-3 overflow-auto">
@@ -124,6 +139,7 @@ export default function Home() {
               <UsersView />
             </ScrollArea>
           )}
+        </div>
         </div>
       </main>
 

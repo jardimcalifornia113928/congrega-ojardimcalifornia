@@ -22,9 +22,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 interface SidebarProps {
   activeTab: string;
   onNavigate: (tab: string) => void;
+  isMobileOpen: boolean;
+  onMobileClose: () => void;
 }
 
-export function Sidebar({ activeTab, onNavigate }: SidebarProps) {
+export function Sidebar({ activeTab, onNavigate, isMobileOpen, onMobileClose }: SidebarProps) {
   const { logout, user } = useAuth();
   
   const groups = [
@@ -53,8 +55,22 @@ export function Sidebar({ activeTab, onNavigate }: SidebarProps) {
     ]},
   ];
 
+  const handleNav = (tab: string) => {
+    onNavigate(tab);
+    onMobileClose();
+  };
+
   return (
-    <aside className="w-64 bg-[#08111F] border-r border-[#1E293B] flex flex-col h-full flex-shrink-0">
+    <>
+      {isMobileOpen && (
+        <div className="fixed inset-0 z-40 bg-black/60 lg:hidden" onClick={onMobileClose} />
+      )}
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 w-64 bg-[#08111F] border-r border-[#1E293B] flex flex-col
+        transition-transform duration-300 ease-in-out
+        lg:static lg:translate-x-0
+        ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
       <div className="px-5 py-5">
         <div className="flex items-center gap-3">
           <div className="h-9 w-9 rounded-xl bg-[#0EA5E9] flex items-center justify-center text-white font-bold text-base shadow-lg shadow-[#0EA5E9]/20">C</div>
@@ -72,7 +88,7 @@ export function Sidebar({ activeTab, onNavigate }: SidebarProps) {
             {group.items.map((item) => (
               <button
                 key={item.id}
-                onClick={() => onNavigate(item.id)}
+                onClick={() => handleNav(item.id)}
                 className={cn(
                   "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200",
                   activeTab === item.id 
@@ -115,5 +131,6 @@ export function Sidebar({ activeTab, onNavigate }: SidebarProps) {
         </button>
       </div>
     </aside>
+    </>
   );
 }
