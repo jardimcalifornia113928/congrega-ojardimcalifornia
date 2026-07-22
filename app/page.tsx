@@ -92,53 +92,23 @@ export default function Home() {
             <span className="text-sm font-semibold text-white">Jardim Califórnia</span>
           </div>
         </div>
-        <div className="flex-1 overflow-hidden p-4 sm:p-6 lg:p-8">
-        <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col min-h-0">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto w-full min-h-0 space-y-6">
           {activeTab === 'dashboard' && (
-            <div className="flex-1 pr-3 overflow-auto">
-              <Dashboard onNavigate={setActiveTab} />
-            </div>
+            <Dashboard onNavigate={setActiveTab} />
           )}
-          {activeTab === 'publishers' && (
-            <ScrollArea className="flex-1 pr-3">
-              <PublishersView />
-            </ScrollArea>
-          )}
-          {activeTab === 'groups' && (
-            <ScrollArea className="flex-1 pr-3">
-              <GroupsView />
-            </ScrollArea>
-          )}
+          {activeTab === 'publishers' && <PublishersView />}
+          {activeTab === 'groups' && <GroupsView />}
           {activeTab === 'midweek' && <MidweekView />}
-          {activeTab === 'weekend' && (
-            <ScrollArea className="flex-1 pr-3">
-              <WeekendView />
-            </ScrollArea>
-          )}
-          {activeTab === 'attendance' && (
-            <ScrollArea className="flex-1 pr-3">
-              <AttendanceView />
-            </ScrollArea>
-          )}
+          {activeTab === 'weekend' && <WeekendView />}
+          {activeTab === 'attendance' && <AttendanceView />}
           {activeTab === 'field' && <FieldReportView onDirtyChange={setFieldDirty} />}
           {activeTab === 'service' && <ServiceView onDirtyChange={setFieldDirty} />}
           {activeTab === 'public_witness' && <PublicWitnessView />}
           {activeTab === 'cleaning' && <CleaningView />}
-          {activeTab === 'prints' && (
-            <div className="flex-1 pr-3 overflow-y-auto">
-              <PrintsView />
-            </div>
-          )}
-          {activeTab === 'settings' && (
-            <ScrollArea className="flex-1 pr-3">
-              <SettingsView />
-            </ScrollArea>
-          )}
-          {activeTab === 'users' && (
-            <ScrollArea className="flex-1 pr-3">
-              <UsersView />
-            </ScrollArea>
-          )}
+          {activeTab === 'prints' && <PrintsView />}
+          {activeTab === 'settings' && <SettingsView />}
+          {activeTab === 'users' && <UsersView />}
         </div>
         </div>
       </main>
