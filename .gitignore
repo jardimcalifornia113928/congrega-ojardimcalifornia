@@ -35,3 +35,8 @@ server-log.txt
 dev.log
 dev_err.log
 dev_out.log
+dev-server.log
+dev_output.log
+dev_server_err.txt
+dev_server_out.txt
+run-server.bat

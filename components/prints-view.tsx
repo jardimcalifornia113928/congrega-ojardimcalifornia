@@ -201,6 +201,11 @@ export function PrintsView() {
         lifePart2Theme: fallback(midSnap.data()?.lifePart2Theme), lifePart2Speaker: fallback(midSnap.data()?.lifePart2Speaker),
         lifePart3Theme: fallback(midSnap.data()?.lifePart3Theme), lifePart3Speaker: fallback(midSnap.data()?.lifePart3Speaker),
         cbsConductor: fallback(midSnap.data()?.cbsConductor), cbsReader: fallback(midSnap.data()?.cbsReader),
+        superVisitTheme: fallback(midSnap.data()?.superVisitTheme),
+        superVisitSuperintendent: fallback(midSnap.data()?.superVisitSuperintendent),
+        showSuperVisit: midSnap.data()?.showSuperVisit ?? false,
+        superintendentName: fallback(midSnap.data()?.superintendentName),
+        superintendentWife: fallback(midSnap.data()?.superintendentWife),
         mechanicalIndicador1: fallback(midSnap.data()?.mechanicalIndicador1),
         mechanicalIndicador2: fallback(midSnap.data()?.mechanicalIndicador2),
         mechanicalMicrofone1: fallback(midSnap.data()?.mechanicalMicrofone1),
@@ -547,6 +552,7 @@ export function PrintsView() {
           midweek={midweekData}
           weekend={weekendData}
           onClose={() => setShowPreview(false)}
+          userEmail={user?.email || ''}
         />
       )}
 

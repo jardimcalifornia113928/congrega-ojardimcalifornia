@@ -440,7 +440,7 @@ export function ServiceView({ onDirtyChange }: ServiceViewProps) {
   }
 
   return (
-    <div className="space-y-6 h-full overflow-y-auto pb-6">
+    <div className="space-y-6 h-full overflow-auto pb-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Serviço de Campo</h1>
         <div className="flex gap-2">

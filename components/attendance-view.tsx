@@ -377,7 +377,7 @@ export function AttendanceView() {
       </div>
 
       {/* Grid das Tabelas */}
-      <div className="flex-1 overflow-y-auto pr-2 scrollbar-thin space-y-6">
+      <div className="flex-1 overflow-auto pr-2 scrollbar-thin space-y-6">
         
         {/* TABELA 1: MEIO DE SEMANA */}
         <div className="bg-[#0B1220]/70 border border-[#1E293B]/60 rounded-2xl p-6 print-card">

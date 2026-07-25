@@ -92,7 +92,7 @@ export default function Home() {
             <span className="text-sm font-semibold text-white">Jardim Califórnia</span>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <div className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto w-full min-h-0 space-y-6">
           {activeTab === 'dashboard' && (
             <Dashboard onNavigate={setActiveTab} />

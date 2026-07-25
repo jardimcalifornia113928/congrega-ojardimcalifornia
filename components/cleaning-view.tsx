@@ -192,7 +192,7 @@ export function CleaningView() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto pr-2 scrollbar-thin space-y-6">
+        <div className="flex-1 overflow-auto pr-2 scrollbar-thin space-y-6">
           {renderTable('midweek', midweekDates)}
           {renderTable('weekend', weekendDates)}
         </div>

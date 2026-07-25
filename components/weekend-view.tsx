@@ -158,6 +158,11 @@ interface WeekendMeetingData {
   watchtowerConductor: string;
   watchtowerReader: string;
 
+  // Visita do Superintendente
+  superVisitTheme: string;
+  superVisitSuperintendent: string;
+  showSuperVisit: boolean;
+
   // Designação Mecanica
   mechanicalIndicador1: string;
   mechanicalIndicador2: string;
@@ -177,6 +182,10 @@ const defaultMeetingData: WeekendMeetingData = {
   watchtowerConductor: "",
   watchtowerReader: "",
 
+  superVisitTheme: "",
+  superVisitSuperintendent: "",
+  showSuperVisit: false,
+
   mechanicalIndicador1: "",
   mechanicalIndicador2: "",
   mechanicalMicrofone1: "",
@@ -186,7 +195,7 @@ const defaultMeetingData: WeekendMeetingData = {
 };
 
 export function WeekendView() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
     const today = new Date();
     const day = today.getDay();
@@ -202,6 +211,7 @@ export function WeekendView() {
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [midweekData, setMidweekData] = useState<MidweekPreviewData | null>(null);
   const [savedWeeks, setSavedWeeks] = useState<string[]>([]);
+  const [superintendentName, setSuperintendentName] = useState("");
 
   const getMondayStr = (date: Date): string => {
     const d = new Date(date);
@@ -347,6 +357,11 @@ export function WeekendView() {
           lifePart2Theme: f(d.lifePart2Theme), lifePart2Speaker: f(d.lifePart2Speaker),
           lifePart3Theme: f(d.lifePart3Theme), lifePart3Speaker: f(d.lifePart3Speaker),
           cbsConductor: f(d.cbsConductor), cbsReader: f(d.cbsReader),
+          superVisitTheme: f(d.superVisitTheme),
+          superVisitSuperintendent: f(d.superVisitSuperintendent),
+          showSuperVisit: d.showSuperVisit ?? false,
+          superintendentName: f(d.superintendentName),
+          superintendentWife: f(d.superintendentWife),
           mechanicalIndicador1: f(d.mechanicalIndicador1),
           mechanicalIndicador2: f(d.mechanicalIndicador2),
           mechanicalMicrofone1: f(d.mechanicalMicrofone1),
@@ -370,6 +385,19 @@ export function WeekendView() {
     window.print();
   };
 
+  // Fetch superintendent name from settings
+  useEffect(() => {
+    if (!user) return;
+    const docRef = doc(db, 'settings', `congregation_${user.uid}`);
+    const unsubscribe = onSnapshot(docRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setSuperintendentName(data.circuitSuperintendent || "");
+      }
+    });
+    return () => unsubscribe();
+  }, [user]);
+
   const updateField = (key: keyof WeekendMeetingData, value: any) => {
     setMeetingData(prev => ({
       ...prev,
@@ -387,7 +415,7 @@ export function WeekendView() {
 
   return (
     <div className="h-full flex flex-col min-h-0">
-    <div className="flex-1 overflow-y-auto pr-2 space-y-6">
+    <div className="flex-1 overflow-auto pr-2 space-y-6">
 
       {/* Header (Não imprime no papel) */}
       <div className="flex justify-between items-end shrink-0 no-print">
@@ -418,25 +446,6 @@ export function WeekendView() {
             <span className={`text-[10px] font-bold px-2 py-1 rounded-md ${savedWeeks.includes(mondayStr) ? 'bg-emerald-500/20 text-emerald-400' : 'bg-yellow-500/10 text-yellow-500'}`}>
               {savedWeeks.includes(mondayStr) ? 'Salvo' : 'Não salvo'}
             </span>
-
-            <div className="relative overflow-hidden">
-              <input
-                type="date"
-                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                onChange={(e) => {
-                  if (e.target.value) {
-                    const pickedDate = new Date(e.target.value + 'T00:00:00');
-                    const day = pickedDate.getDay();
-                    const diff = pickedDate.getDate() - day + (day === 0 ? -6 : 1);
-                    setSelectedDate(new Date(pickedDate.setDate(diff)));
-                  }
-                }}
-              />
-              <Button variant="outline" className="h-8 border-[#1E293B] text-[#94A3B8] font-bold rounded-lg gap-2 px-3 text-xs">
-                <Calendar className="h-3.5 w-3.5" />
-                Buscar Data
-              </Button>
-            </div>
 
             {/* Saved weeks dropdown */}
             {savedWeeks.length > 0 && (
@@ -484,6 +493,13 @@ export function WeekendView() {
             <Save className="h-4 w-4" />
             {isSaving ? "Salvando..." : "Salvar Quadro"}
           </Button>
+
+          {meetingData.showSuperVisit && (
+            <div className="flex items-center gap-2 h-10 px-4 bg-amber-600/20 border border-amber-600/40 rounded-xl text-amber-400 text-xs font-bold">
+              <Calendar className="h-4 w-4" />
+              Visita Ativada no Meio de Semana
+            </div>
+          )}
         </div>
       </div>
 
@@ -795,6 +811,39 @@ export function WeekendView() {
             </div>
           </div>
 
+          {/* Visita do Superintendente */}
+          {meetingData.showSuperVisit && (
+            <div className="border-t border-[#0EA5E9]/30 pt-4 mt-4">
+              <h4 className="text-[11px] font-black text-amber-400 uppercase tracking-wider mb-3">Visita do Superintendente</h4>
+              <div className="space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 py-1">
+                  <span className="w-full sm:w-60 text-xs text-[#94A3B8] font-bold shrink-0 print:text-black">Tema</span>
+                  <input
+                    type="text"
+                    maxLength={65}
+                    value={meetingData.superVisitTheme}
+                    onChange={(e) => updateField("superVisitTheme", e.target.value)}
+                    placeholder="Tema da visita (máx. 65 caracteres)"
+                    className="w-full bg-[#0F172A] border border-[#1E293B]/50 focus:border-[#0EA5E9] text-white rounded-lg px-3 py-1.5 h-10 text-xs focus:outline-none transition-all"
+                  />
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 py-1">
+                  <span className="w-full sm:w-60 text-xs text-[#94A3B8] font-bold shrink-0 print:text-black">Superintendente</span>
+                  <select
+                    value={meetingData.superVisitSuperintendent}
+                    onChange={(e) => updateField("superVisitSuperintendent", e.target.value)}
+                    className="w-full bg-[#0F172A] border border-[#1E293B]/50 focus:border-[#0EA5E9] text-white rounded-lg px-3 py-1.5 h-10 text-xs focus:outline-none transition-all"
+                  >
+                    <option value="">Selecionar...</option>
+                    {superintendentName && (
+                      <option value={superintendentName}>{superintendentName}</option>
+                    )}
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
 
@@ -883,6 +932,8 @@ export function WeekendView() {
             lifePart2Theme: '', lifePart2Speaker: '',
             lifePart3Theme: '', lifePart3Speaker: '',
             cbsConductor: '', cbsReader: '',
+            superVisitTheme: '', superVisitSuperintendent: '', showSuperVisit: false,
+            superintendentName: '', superintendentWife: '',
             mechanicalIndicador1: '', mechanicalIndicador2: '',
             mechanicalMicrofone1: '', mechanicalMicrofone2: '',
             mechanicalPalco: '', mechanicalAudioVideo: '',
@@ -904,6 +955,7 @@ export function WeekendView() {
             mechanicalAudioVideo: meetingData.mechanicalAudioVideo,
           }}
           onClose={() => setShowPreview(false)}
+          userEmail={user?.email || ''}
         />
       )}
     </div>

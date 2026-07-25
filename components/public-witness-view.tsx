@@ -395,7 +395,7 @@ export function PublicWitnessView() {
         />
       </div>
 
-      <div className="flex-1 overflow-y-auto pr-2 scrollbar-thin space-y-6">
+      <div className="flex-1 overflow-auto pr-2 scrollbar-thin space-y-6">
         {/* Carrinho Macaco com abas */}
         <div className="bg-[#0B1220]/70 border border-[#1E293B]/60 rounded-2xl p-6">
           <div className="flex items-center gap-4 mb-4 border-b border-[#1E293B]/40 pb-3">

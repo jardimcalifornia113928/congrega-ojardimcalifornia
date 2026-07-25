@@ -209,6 +209,11 @@ interface MidweekMeetingData {
   cbsDuration: number;
   cbsReader: string;
 
+  // Visita do Superintendente
+  superVisitTheme: string;
+  superVisitSuperintendent: string;
+  showSuperVisit: boolean;
+
   closingPrayer: string;
 
   // Songs
@@ -280,6 +285,10 @@ const defaultMeetingData: MidweekMeetingData = {
   cbsDuration: 30,
   cbsReader: "",
 
+  superVisitTheme: "",
+  superVisitSuperintendent: "",
+  showSuperVisit: false,
+
   closingPrayer: "",
 
   songOpening: "",
@@ -295,7 +304,7 @@ const defaultMeetingData: MidweekMeetingData = {
 };
 
 export function MidweekView() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
     // Start with the current week's Monday
     const today = new Date();
@@ -316,6 +325,8 @@ export function MidweekView() {
   const [showSchool, setShowSchool] = useState(false);
   const [schoolCards, setSchoolCards] = useState<any[]>([]);
   const [isSchoolLoading, setIsSchoolLoading] = useState(false);
+  const [superintendentName, setSuperintendentName] = useState("");
+  const [superintendentWife, setSuperintendentWife] = useState("");
 
   // Get Monday Date String for document ID (format: YYYY-MM-DD)
   const getMondayStr = (date: Date): string => {
@@ -423,10 +434,14 @@ export function MidweekView() {
     try {
       await setDoc(doc(db, 'midweek_meetings', mondayStr), {
         ...meetingData,
+        showSuperVisit: meetingData.showSuperVisit,
         weekMonday: mondayStr,
         weekFormatted: formatWeekRange(selectedDate),
         updatedAt: new Date().toISOString()
       });
+      await setDoc(doc(db, 'weekend_meetings', mondayStr), {
+        showSuperVisit: meetingData.showSuperVisit,
+      }, { merge: true });
       toast.success("Programação salva com sucesso!", { id: toastId });
     } catch (error) {
       console.error("Save midweek meeting error:", error);
@@ -469,6 +484,8 @@ export function MidweekView() {
         lifePart2Theme: f(meetingData.lifePart2Theme), lifePart2Speaker: f(meetingData.lifePart2Speaker),
         lifePart3Theme: f(meetingData.lifePart3Theme), lifePart3Speaker: f(meetingData.lifePart3Speaker),
         cbsConductor: f(meetingData.cbsConductor), cbsReader: f(meetingData.cbsReader),
+        superVisitTheme: f(meetingData.superVisitTheme), superVisitSuperintendent: f(meetingData.superVisitSuperintendent), showSuperVisit: meetingData.showSuperVisit,
+        superintendentName: f(superintendentName), superintendentWife: f(superintendentWife),
         mechanicalIndicador1: f(meetingData.mechanicalIndicador1),
         mechanicalIndicador2: f(meetingData.mechanicalIndicador2),
         mechanicalMicrofone1: f(meetingData.mechanicalMicrofone1),
@@ -532,6 +549,20 @@ export function MidweekView() {
 
   const contentRef = useRef<HTMLDivElement>(null);
 
+  // Fetch superintendent name from settings
+  useEffect(() => {
+    if (!user) return;
+    const docRef = doc(db, 'settings', `congregation_${user.uid}`);
+    const unsubscribe = onSnapshot(docRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setSuperintendentName(data.circuitSuperintendent || "");
+        setSuperintendentWife(data.circuitSuperintendentWife || "");
+      }
+    });
+    return () => unsubscribe();
+  }, [user]);
+
   const updateField = (key: keyof MidweekMeetingData, value: any) => {
     setMeetingData(prev => ({
       ...prev,
@@ -549,7 +580,7 @@ export function MidweekView() {
 
   return (
     <div className="flex flex-col min-h-0 flex-1">
-      <div className="flex-1 overflow-y-auto pr-2 space-y-6" ref={contentRef}>
+      <div className="flex-1 overflow-auto pr-2 space-y-6" ref={contentRef}>
 
         {/* Header (Não imprime no papel) */}
         <div className="flex justify-between items-end shrink-0 no-print">
@@ -580,26 +611,6 @@ export function MidweekView() {
               <span className={`text-[10px] font-bold px-2 py-1 rounded-md ${savedWeeks.includes(mondayStr) ? 'bg-emerald-500/20 text-emerald-400' : 'bg-yellow-500/10 text-yellow-500'}`}>
                 {savedWeeks.includes(mondayStr) ? 'Salvo' : 'Não salvo'}
               </span>
-
-              {/* Seletor de data disfarçado */}
-              <div className="relative overflow-hidden">
-                <input
-                  type="date"
-                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                  onChange={(e) => {
-                    if (e.target.value) {
-                      const pickedDate = new Date(e.target.value + 'T00:00:00');
-                      const day = pickedDate.getDay();
-                      const diff = pickedDate.getDate() - day + (day === 0 ? -6 : 1);
-                      setSelectedDate(new Date(pickedDate.setDate(diff)));
-                    }
-                  }}
-                />
-                <Button variant="outline" className="h-8 border-[#1E293B] text-[#94A3B8] font-bold rounded-lg gap-2 px-3 text-xs">
-                  <Calendar className="h-3.5 w-3.5" />
-                  Buscar Data
-                </Button>
-              </div>
 
               {/* Saved weeks dropdown */}
               {savedWeeks.length > 0 && (
@@ -647,6 +658,15 @@ export function MidweekView() {
             >
               <Save className="h-4 w-4" />
               {isSaving ? "Salvando..." : "Salvar Quadro"}
+            </Button>
+
+            <Button
+              onClick={() => isAdmin && setMeetingData(prev => ({ ...prev, showSuperVisit: !prev.showSuperVisit }))}
+              className={`h-10 font-bold rounded-xl px-4 text-xs gap-2 ${meetingData.showSuperVisit ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'bg-[#1E293B] hover:bg-[#334155] text-[#94A3B8]'} border border-[#1E293B] ${!isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+              title={!isAdmin ? "Apenas administradores podem ativar" : ""}
+            >
+              <Calendar className="h-4 w-4" />
+              {meetingData.showSuperVisit ? "Visita Ativa" : "Visita Superintendente"}
             </Button>
           </div>
         </div>
@@ -1053,6 +1073,39 @@ export function MidweekView() {
               </div>
             </div>
 
+            {/* Visita do Superintendente */}
+            {meetingData.showSuperVisit && (
+              <div className="border-t border-[#0EA5E9]/30 pt-4 mt-4">
+                <h4 className="text-[11px] font-black text-amber-400 uppercase tracking-wider mb-3">Visita do Superintendente</h4>
+                <div className="space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 py-1">
+                    <span className="w-full sm:w-60 text-xs text-[#94A3B8] font-bold shrink-0 print:text-black">Tema</span>
+                    <input
+                      type="text"
+                      maxLength={65}
+                      value={meetingData.superVisitTheme}
+                      onChange={(e) => updateField("superVisitTheme", e.target.value)}
+                      placeholder="Tema da visita (máx. 65 caracteres)"
+                      className="w-full bg-[#0F172A] border border-[#1E293B]/50 focus:border-[#0EA5E9] text-white rounded-lg px-3 py-1.5 h-10 text-xs focus:outline-none transition-all"
+                    />
+                  </div>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 py-1">
+                    <span className="w-full sm:w-60 text-xs text-[#94A3B8] font-bold shrink-0 print:text-black">Superintendente</span>
+                    <select
+                      value={meetingData.superVisitSuperintendent}
+                      onChange={(e) => updateField("superVisitSuperintendent", e.target.value)}
+                      className="w-full bg-[#0F172A] border border-[#1E293B]/50 focus:border-[#0EA5E9] text-white rounded-lg px-3 py-1.5 h-10 text-xs focus:outline-none transition-all"
+                    >
+                      <option value="">Selecionar...</option>
+                      {superintendentName && (
+                        <option value={superintendentName}>{superintendentName}</option>
+                      )}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+
           </div>
         </div>
 
@@ -1132,6 +1185,7 @@ export function MidweekView() {
           midweek={midweekPreview}
           weekend={weekendPreview}
           onClose={() => setShowPreview(false)}
+          userEmail={user?.email || ''}
         />
       )}
 
