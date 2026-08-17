@@ -10,6 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 const Dashboard = dynamic(() => import('@/components/dashboard').then(m => ({ default: m.Dashboard })), { ssr: false });
 const PublishersView = dynamic(() => import('@/components/publishers-view').then(m => ({ default: m.PublishersView })), { ssr: false });
+const CongregationView = dynamic(() => import('@/components/congregation-view').then(m => ({ default: m.CongregationView })), { ssr: false });
 const GroupsView = dynamic(() => import('@/components/groups-view').then(m => ({ default: m.GroupsView })), { ssr: false });
 const MidweekView = dynamic(() => import('@/components/midweek-view').then(m => ({ default: m.MidweekView })), { ssr: false });
 const WeekendView = dynamic(() => import('@/components/weekend-view').then(m => ({ default: m.WeekendView })), { ssr: false });
@@ -98,6 +99,7 @@ export default function Home() {
             <Dashboard onNavigate={setActiveTab} />
           )}
           {activeTab === 'publishers' && <PublishersView />}
+          {activeTab === 'congregation' && <CongregationView />}
           {activeTab === 'groups' && <GroupsView />}
           {activeTab === 'midweek' && <MidweekView />}
           {activeTab === 'weekend' && <WeekendView />}

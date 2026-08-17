@@ -35,6 +35,7 @@ export function Sidebar({ activeTab, onNavigate, isMobileOpen, onMobileClose }: 
     ]},
     { title: 'PESSOAS', items: [
       { id: 'publishers', label: 'Publicadores', icon: Users },
+      { id: 'congregation', label: 'Congregação', icon: UsersRound },
       { id: 'groups', label: 'Grupo de Campo', icon: UsersRound },
     ]},
     { title: 'REUNIÕES', items: [
