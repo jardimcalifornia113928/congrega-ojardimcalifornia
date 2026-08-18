@@ -37,6 +37,14 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // === COLEÇÃO: territories ===
+    match /territories/{docId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update: if isAuth();
+      allow delete: if isAdmin();
+    }
+
     // === COLEÇÃO: midweek_meetings ===
     match /midweek_meetings/{docId} {
       allow read, write: if isAuth();

@@ -16,6 +16,7 @@ const MidweekView = dynamic(() => import('@/components/midweek-view').then(m => 
 const WeekendView = dynamic(() => import('@/components/weekend-view').then(m => ({ default: m.WeekendView })), { ssr: false });
 const FieldReportView = dynamic(() => import('@/components/field-report-view').then(m => ({ default: m.FieldReportView })), { ssr: false });
 const ServiceView = dynamic(() => import('@/components/service-view').then(m => ({ default: m.ServiceView })), { ssr: false });
+const TerritoriesView = dynamic(() => import('@/components/territories-view').then(m => ({ default: m.TerritoriesView })), { ssr: false });
 const PrintsView = dynamic(() => import('@/components/prints-view').then(m => ({ default: m.PrintsView })), { ssr: false });
 const SettingsView = dynamic(() => import('@/components/settings-view').then(m => ({ default: m.SettingsView })), { ssr: false });
 const AttendanceView = dynamic(() => import('@/components/attendance-view').then(m => ({ default: m.AttendanceView })), { ssr: false });
@@ -106,6 +107,7 @@ export default function Home() {
           {activeTab === 'attendance' && <AttendanceView />}
           {activeTab === 'field' && <FieldReportView onDirtyChange={setFieldDirty} />}
           {activeTab === 'service' && <ServiceView onDirtyChange={setFieldDirty} />}
+          {activeTab === 'territories' && <TerritoriesView />}
           {activeTab === 'public_witness' && <PublicWitnessView />}
           {activeTab === 'cleaning' && <CleaningView />}
           {activeTab === 'prints' && <PrintsView />}

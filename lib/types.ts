@@ -11,7 +11,7 @@ export interface Publisher {
   gender: 'masculino' | 'feminino';
   status: 'ativo' | 'inativo' | 'removido' | 'mudou';
   groupId?: string;
-  responsibility: 'publicador' | 'servo' | 'anciao';
+  responsibility: 'publicador' | 'servo' | 'anciao' | 'estudante';
   pioneerType: 'nao' | 'auxiliar' | 'regular' | 'especial';
   baptismDate?: string;
   tags?: string[];
@@ -110,6 +110,23 @@ export interface UserData {
   permissions?: Record<string, { cadastrar: boolean; limpar: boolean; excluir: boolean; backup: boolean; imprimir: boolean }>;
   createdAt?: string;
   lastAccess?: string;
+}
+
+export interface Territory {
+  id: string;
+  number: string;
+  publicadorId?: string;
+  publicadorName?: string;
+  dirigenteId?: string;
+  dirigenteName?: string;
+  dirigentePhone?: string;
+  saidaId?: string;
+  saidaName?: string;
+  dataDesignacao?: string;
+  dataConclusao?: string;
+  ultimaDataConcluida?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CongregationSettings {

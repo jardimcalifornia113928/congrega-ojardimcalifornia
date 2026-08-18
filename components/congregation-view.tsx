@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Loader2, Users, Phone, ArrowUpDown, ArrowDownAZ, Save, Check } from 'lucide-react';
+import { Loader2, Users, Phone, ArrowUpDown, ArrowDownAZ, Save, Check, Printer } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { phoneMask } from '@/lib/utils';
 import { db } from '@/lib/firebase';
@@ -12,9 +13,12 @@ import { useAuth } from '@/components/auth-provider';
 import { handleFirestoreError, OperationType } from '@/lib/firebase-utils';
 import { collection, onSnapshot, query, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
+import { CongregationPreviewModal } from '@/components/congregation-preview-modal';
+import type { CongregationPrintRow } from '@/components/congregation-print-layout';
 
 const RESPONSIBILITY_LABELS: Record<string, string> = {
   publicador: 'Publicador',
+  estudante: 'Estudante',
   servo: 'Servo Ministerial',
   anciao: 'Ancião',
 };
@@ -42,6 +46,7 @@ export function CongregationView() {
   const [filter, setFilter] = useState<FilterId>('all');
   const [phoneDrafts, setPhoneDrafts] = useState<Record<string, string>>({});
   const [savingPhones, setSavingPhones] = useState<Set<string>>(new Set());
+  const [showPrintPreview, setShowPrintPreview] = useState(false);
   const { user } = useAuth();
 
   React.useEffect(() => {
@@ -98,6 +103,17 @@ export function CongregationView() {
 
   const filteredPublishers = publishers.filter(matchesFilter);
 
+  const printRows: CongregationPrintRow[] = filteredPublishers.map(p => ({
+    name: getFullName(p),
+    phone: p.phone ? phoneMask(p.phone) : '',
+    groupName: getGroupName(p.groupId),
+    responsibility: RESPONSIBILITY_LABELS[p.responsibility] || 'Publicador',
+    status: STATUS_LABELS[p.status] || 'Ativo',
+  }));
+
+  const printTitle = 'Publicadores Jardim Califórnia';
+  const printSubtitle = FILTERS.find(f => f.id === filter)?.label || 'Todos os Publicadores';
+
   const handleSavePhone = async (publisherId: string) => {
     if (!user || !phoneDrafts[publisherId]) return;
     setSavingPhones(prev => new Set(prev).add(publisherId));
@@ -133,10 +149,21 @@ export function CongregationView() {
           <h1 className="text-4xl font-black text-white tracking-tight mb-2">Congregação</h1>
           <p className="text-[#94A3B8] font-bold">Lista completa do corpo de publicadores.</p>
         </div>
-        <Badge className="bg-[#0EA5E9]/10 text-[#0EA5E9] border border-[#0EA5E9]/20 font-bold h-9 px-4 rounded-xl text-[11px] uppercase tracking-wider">
-          <Users className="h-3.5 w-3.5 mr-1.5" />
-          {filteredPublishers.length} publicador(es)
-        </Badge>
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={() => setShowPrintPreview(true)}
+            disabled={filteredPublishers.length === 0}
+            variant="outline"
+            className="border-[#1E293B] text-[#94A3B8] hover:text-white hover:border-[#334155] font-bold h-9 rounded-xl gap-2 px-5 text-[11px]"
+          >
+            <Printer className="h-4 w-4" />
+            Imprimir
+          </Button>
+          <Badge className="bg-[#0EA5E9]/10 text-[#0EA5E9] border border-[#0EA5E9]/20 font-bold h-9 px-4 rounded-xl text-[11px] uppercase tracking-wider">
+            <Users className="h-3.5 w-3.5 mr-1.5" />
+            {filteredPublishers.length} publicador(es)
+          </Badge>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2 shrink-0">
@@ -210,6 +237,7 @@ export function CongregationView() {
                     };
                     const respBg: Record<string, string> = {
                       publicador: 'bg-[#1E293B]/60 text-[#94A3B8] border-[#1E293B]',
+                      estudante: 'bg-teal-500/10 text-teal-400 border-teal-500/20',
                       servo: 'bg-violet-500/10 text-violet-400 border-violet-500/20',
                       anciao: 'bg-[#0EA5E9]/10 text-[#0EA5E9] border-[#0EA5E9]/20',
                     };
@@ -261,6 +289,15 @@ export function CongregationView() {
           </div>
         </CardContent>
       </Card>
+
+      {showPrintPreview && (
+        <CongregationPreviewModal
+          title={printTitle}
+          subtitle={printSubtitle}
+          rows={printRows}
+          onClose={() => setShowPrintPreview(false)}
+        />
+      )}
     </div>
   );
 }

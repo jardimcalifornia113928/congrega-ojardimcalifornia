@@ -40,3 +40,14 @@ dev_output.log
 dev_server_err.txt
 dev_server_out.txt
 run-server.bat
+dev-server-err.log
+tunnel.log
+tunnel-err.log
+
+# scripts locais / diagnóstico
+inspect-data.cjs
+start-tunnel.ps1
+restart-dev.ps1
+
+# cópia local das imagens (a versão servida é public/territorio)
+/territorio/

@@ -596,6 +596,7 @@ export function PublishersView() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="publicador">Publicador</SelectItem>
+                          <SelectItem value="estudante">Estudante</SelectItem>
                           <SelectItem value="servo">Servo Ministerial</SelectItem>
                           <SelectItem value="anciao">Ancião</SelectItem>
                         </SelectContent>
