@@ -235,35 +235,74 @@ export function TerritoriesView() {
     }
     if (sendingId) return;
     setSendingId(t.id);
+
     const message = buildMessage(t);
     const waUrl = `https://wa.me/${toWhatsAppNumber(t.dirigentePhone)}?text=${encodeURIComponent(message)}`;
-    const imageUrl = `/territorio/${t.number}.png`;
 
-    // No desktop, abre o WhatsApp direto (wa.me com o texto) — caminho garantido
-    const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-    if (!isMobile || !navigator.canShare) {
-      window.open(waUrl, '_blank', 'noopener');
-      setSendingId(null);
-      return;
-    }
+    // Compõe a imagem final: mapa do território + informações sobrepostas
+    const composeImage = async (): Promise<File | null> => {
+      try {
+        const res = await fetch(`/territorio/${t.number}.png`);
+        if (!res.ok) throw new Error('imagem indisponível');
+        const blob = await res.blob();
+        const bitmap = await createImageBitmap(blob);
 
-    // No mobile, tenta o Web Share com a imagem (WhatsApp aparece na lista de apps)
-    try {
-      const res = await fetch(imageUrl);
-      if (!res.ok) throw new Error('imagem indisponível');
-      const blob = await res.blob();
-      const file = new File([blob], `${t.number}.png`, { type: blob.type });
-      const shareData = { files: [file], text: message, title: `Território Nº ${t.number}` };
+        const canvas = document.createElement('canvas');
+        // Faz um pouco maior que o mapa para caber a faixa de informações
+        const infoH = Math.round(bitmap.height * 0.16);
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height + infoH;
 
-      if (navigator.canShare(shareData)) {
-        await navigator.share(shareData);
-        toast.success('Enviado para o dirigente!');
-        setSendingId(null);
-        return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return null;
+
+        // Fundo escuro + faixa de informações no topo
+        ctx.fillStyle = '#0B1120';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(bitmap, 0, infoH);
+
+        const pad = Math.round(bitmap.width * 0.045);
+        const lineH = Math.round(infoH / 3.1);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = `bold ${Math.round(bitmap.width * 0.055)}px Arial, sans-serif`;
+        ctx.fillText(`TERRITÓRIO Nº ${t.number}`, pad, lineH);
+
+        ctx.font = `${Math.round(bitmap.width * 0.036)}px Arial, sans-serif`;
+        ctx.fillStyle = '#94A3B8';
+        ctx.fillText(
+          `Dirigente: ${t.dirigenteName || '—'}   •   Saída de campo: ${t.saidaName || '—'}`,
+          pad,
+          lineH * 2
+        );
+        if (t.dataDesignacao) {
+          ctx.fillText(`Data da designação: ${formatDate(t.dataDesignacao)}`, pad, lineH * 2.6);
+        }
+
+        const outBlob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b as Blob), 'image/png'));
+        return new File([outBlob], `territorio-${t.number}.png`, { type: 'image/png' });
+      } catch {
+        return null;
       }
-    } catch {
-      // Web Share falhou ou cancelado → cai no wa.me
+    };
+
+    const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+
+    // Mobile: compartilha a IMAGEM COMPOSTA (mapa + informações) — WhatsApp aparece na lista
+    if (isMobile && typeof navigator.share === 'function') {
+      const file = await composeImage();
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], text: message });
+          toast.success('Enviado para o dirigente!');
+          setSendingId(null);
+          return;
+        } catch {
+          // cancelado/falhou → cai no wa.me
+        }
+      }
     }
+
+    // Desktop ou fallback: abre o wa.me com o texto
     window.open(waUrl, '_blank', 'noopener');
     setSendingId(null);
   };
