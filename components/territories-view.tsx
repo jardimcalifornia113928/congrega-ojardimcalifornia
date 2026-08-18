@@ -456,7 +456,7 @@ export function TerritoriesView() {
                 <Label htmlFor="number" className="text-[10px] font-black text-[#64748B] tracking-widest uppercase">Nº do Território *</Label>
                 <Select
                   value={form.number}
-                  onValueChange={(val) => setForm({ ...form, number: val })}
+                  onValueChange={(val) => setForm({ ...form, number: val ?? '' })}
                 >
                   <SelectTrigger className="h-12 bg-[#1E293B]/50 border-[#1E293B]/50 rounded-xl w-full">
                     <span>{form.number ? `Território Nº ${form.number}` : "Selecione o território"}</span>
@@ -481,7 +481,7 @@ export function TerritoriesView() {
                 <Label htmlFor="dirigenteId" className="text-[10px] font-black text-[#64748B] tracking-widest uppercase">Dirigente de Campo</Label>
                 <Select
                   value={form.dirigenteId}
-                  onValueChange={(val) => setForm({ ...form, dirigenteId: val })}
+                  onValueChange={(val) => setForm({ ...form, dirigenteId: val ?? '' })}
                 >
                   <SelectTrigger className="h-12 bg-[#1E293B]/50 border-[#1E293B]/50 rounded-xl w-full">
                     <span>{form.dirigenteId ? (dirigentes.find(p => p.id === form.dirigenteId) ? fullName(dirigentes.find(p => p.id === form.dirigenteId)!) : "Selecionar...") : "Selecionar..."}</span>
@@ -501,7 +501,7 @@ export function TerritoriesView() {
                 <Label htmlFor="saidaId" className="text-[10px] font-black text-[#64748B] tracking-widest uppercase">Saída de Campo</Label>
                 <Select
                   value={form.saidaId}
-                  onValueChange={(val) => setForm({ ...form, saidaId: val })}
+                  onValueChange={(val) => setForm({ ...form, saidaId: val ?? '' })}
                 >
                   <SelectTrigger className="h-12 bg-[#1E293B]/50 border-[#1E293B]/50 rounded-xl w-full">
                     <span>{form.saidaId ? (saidas.find(p => p.id === form.saidaId) ? fullName(saidas.find(p => p.id === form.saidaId)!) : "Selecionar...") : "Selecionar..."}</span>
