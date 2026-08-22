@@ -661,8 +661,11 @@ export function MidweekView() {
             </Button>
 
             <Button
-              onClick={() => isAdmin && setMeetingData(prev => ({ ...prev, showSuperVisit: !prev.showSuperVisit }))}
-              className={`h-10 font-bold rounded-xl px-4 text-xs gap-2 ${meetingData.showSuperVisit ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'bg-[#1E293B] hover:bg-[#334155] text-[#94A3B8]'} border border-[#1E293B] ${!isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (isAdmin) setMeetingData(prev => ({ ...prev, showSuperVisit: !prev.showSuperVisit }));
+              }}
+              className={`h-10 font-bold rounded-xl px-4 text-xs gap-2 ${meetingData.showSuperVisit ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'bg-[#1E293B] hover:bg-[#334155] text-[#94A3B8]'} border border-[#1E293B] ${!isAdmin ? 'opacity-50 cursor-not-allowed' : ''} no-print`}
               title={!isAdmin ? "Apenas administradores podem ativar" : ""}
             >
               <Calendar className="h-4 w-4" />
@@ -787,6 +790,7 @@ export function MidweekView() {
                     <option value="04 - Fazendo discipulos">04 - Fazendo discipulos</option>
                     <option value="04 - Estudo Biblico">04 - Estudo Biblico</option>
                     <option value="04 - Discurso">04 - Discurso</option>
+                    <option value="04 - O que você diria">04 - O que você diria</option>
                   </select>
                 </div>
                 <div className="w-full sm:w-72">
@@ -838,6 +842,7 @@ export function MidweekView() {
                     <option value="05 - Fazendo discipulos">05 - Fazendo discipulos</option>
                     <option value="05 - Estudo Biblico">05 - Estudo Biblico</option>
                     <option value="05 - Discurso">05 - Discurso</option>
+                    <option value="05 - O que você diria">05 - O que você diria</option>
                   </select>
                 </div>
                 <div className="w-full sm:w-72">
@@ -889,6 +894,7 @@ export function MidweekView() {
                     <option value="06 - Fazendo discipulos">06 - Fazendo discipulos</option>
                     <option value="06 - Estudo Biblico">06 - Estudo Biblico</option>
                     <option value="06 - Discurso">06 - Discurso</option>
+                    <option value="06 - O que você diria">06 - O que você diria</option>
                   </select>
                 </div>
                 <div className="w-full sm:w-72">
@@ -940,6 +946,7 @@ export function MidweekView() {
                     <option value="07 - Fazendo discipulos">07 - Fazendo discipulos</option>
                     <option value="07 - Estudo Biblico">07 - Estudo Biblico</option>
                     <option value="07 - Discurso">07 - Discurso</option>
+                    <option value="07 - O que você diria">07 - O que você diria</option>
                   </select>
                 </div>
                 <div className="w-full sm:w-72">

@@ -123,6 +123,8 @@ export interface Territory {
   saidaId?: string;
   saidaName?: string;
   dataDesignacao?: string;
+  horario?: string;
+  month?: string;
   dataConclusao?: string;
   ultimaDataConcluida?: string;
   createdAt?: string;
