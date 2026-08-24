@@ -137,10 +137,29 @@ async function getTerritoryCrop(): Promise<TerritoryCrop | null> {
     if (sel && typeof sel.x === 'number' && typeof sel.w === 'number') {
       return { x: sel.x, y: sel.y, w: sel.w, h: sel.h };
     }
-    return null;
-  } catch {
-    return null;
-  }
+  } catch { /* ignora */ }
+  try {
+    const raw = localStorage.getItem('territory-pdf-selections');
+    const arr = raw ? JSON.parse(raw) : [];
+    const sel = Array.isArray(arr) ? arr[0] : null;
+    if (sel && typeof sel.x === 'number' && typeof sel.w === 'number') {
+      return { x: sel.x, y: sel.y, w: sel.w, h: sel.h };
+    }
+  } catch { /* ignora */ }
+  return null;
+}
+
+// Estilo para exibir somente a área recortada do mapa dentro do contêiner
+function croppedImgStyle(crop: TerritoryCrop | null): React.CSSProperties {
+  if (!crop || !crop.w || !crop.h) return {};
+  return {
+    position: 'absolute',
+    width: `${100 / crop.w}%`,
+    height: `${100 / crop.h}%`,
+    left: `${-(crop.x / crop.w) * 100}%`,
+    top: `${-(crop.y / crop.h) * 100}%`,
+    maxWidth: 'none',
+  };
 }
 
 async function generateTerritoryPdf(t: Territory): Promise<Uint8Array> {
@@ -193,7 +212,13 @@ export function TerritoriesView() {
   const [sendingId, setSendingId] = React.useState<string | null>(null);
   const [preview, setPreview] = React.useState<{ pdfBytes: Uint8Array; fileName: string; territory: Territory } | null>(null);
   const [registroPreview, setRegistroPreview] = React.useState<{ territories: Territory[]; viewMonth: string; fileName: string } | null>(null);
+  const [territoryCrop, setTerritoryCrop] = React.useState<TerritoryCrop | null>(null);
   const { user } = useAuth();
+
+  React.useEffect(() => {
+    getTerritoryCrop().then(setTerritoryCrop);
+  }, []);
+  const cropAspect = territoryCrop ? ((territoryCrop.w * 1440) / (territoryCrop.h * 810)).toFixed(4) : null;
 
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
@@ -519,11 +544,12 @@ export function TerritoriesView() {
                 {visibleTerritories.map((t) => (
                   <div key={t.id} className="rounded-2xl border border-[#1E293B] bg-[#1E293B]/30 overflow-hidden">
                     <div className="flex items-center gap-3 p-3">
-                      <div className="h-16 w-16 rounded-xl overflow-hidden shrink-0 border border-[#1E293B]">
+                      <div className={`h-16 w-16 rounded-xl overflow-hidden shrink-0 border border-[#1E293B] ${territoryCrop ? 'relative' : ''}`}>
                         <img
                           src={`/territorio/${t.number}.png`}
                           alt={`Território ${t.number}`}
-                          className="w-full h-full object-cover"
+                          className={territoryCrop ? '' : 'w-full h-full object-cover'}
+                          style={croppedImgStyle(territoryCrop)}
                         />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -612,11 +638,12 @@ export function TerritoriesView() {
                       <tr key={t.id} className="border-b border-[#1E293B]/60 hover:bg-[#1E293B]/20 transition-colors">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
-                            <div className="h-9 w-9 rounded-lg overflow-hidden shrink-0 border border-[#1E293B]">
+                            <div className={`h-9 w-9 rounded-lg overflow-hidden shrink-0 border border-[#1E293B] ${territoryCrop ? 'relative' : ''}`}>
                               <img
                                 src={`/territorio/${t.number}.png`}
                                 alt={`Território ${t.number}`}
-                                className="w-full h-full object-cover"
+                                className={territoryCrop ? '' : 'w-full h-full object-cover'}
+                                style={croppedImgStyle(territoryCrop)}
                               />
                             </div>
                             <span className="text-sm font-black text-white">{t.number}</span>
@@ -717,11 +744,15 @@ export function TerritoriesView() {
                 </SelectContent>
               </Select>
               {form.number && (
-                <div className="mt-2 rounded-2xl overflow-hidden border border-[#1E293B] h-32 sm:h-44 bg-[#1E293B]/30">
+                <div
+                  className={`mt-2 rounded-2xl overflow-hidden border border-[#1E293B] bg-[#1E293B]/30 ${cropAspect ? 'relative' : 'h-32 sm:h-44'}`}
+                  style={cropAspect ? { aspectRatio: cropAspect } : undefined}
+                >
                   <img
                     src={`/territorio/${form.number}.png`}
                     alt={`Território Nº ${form.number}`}
-                    className="w-full h-full object-cover"
+                    className={territoryCrop ? '' : 'w-full h-full object-cover'}
+                    style={croppedImgStyle(territoryCrop)}
                   />
                 </div>
               )}
