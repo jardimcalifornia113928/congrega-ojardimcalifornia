@@ -447,6 +447,7 @@ function PrintLayout({ midweek, weekend, userEmail }: { midweek: MidweekPreviewD
           <Overlay id="weMecInd1" x={97} y={81} w={200} value={weekend.mechanicalIndicador1} />
           <Overlay id="weMecMic1" x={98} y={57} w={200} value={weekend.mechanicalMicrofone1} />
           <Overlay id="weMecAV" x={98} y={33} w={200} value={weekend.mechanicalAudioVideo} />
+          <Overlay id="weMecInd2" x={389} y={83} w={160} value={weekend.mechanicalIndicador2} />
           <Overlay id="weMecMic2" x={389} y={58} w={160} value={weekend.mechanicalMicrofone2} />
           <Overlay id="weMecPalco" x={389} y={33} w={160} value={weekend.mechanicalPalco} />
         </div>
