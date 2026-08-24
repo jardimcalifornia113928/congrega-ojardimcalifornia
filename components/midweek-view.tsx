@@ -159,8 +159,10 @@ interface MidweekMeetingData {
   talkTheme: string;
   talkDuration: number;
   gemsSpeaker: string;
+  gemsTheme: string;
   gemsDuration: number;
   bibleReadingReader: string;
+  bibleReadingRef: string;
 
   // Ministry parts
   part1Type: string;
@@ -237,8 +239,10 @@ const defaultMeetingData: MidweekMeetingData = {
   talkTheme: "",
   talkDuration: 10,
   gemsSpeaker: "",
+  gemsTheme: "",
   gemsDuration: 10,
   bibleReadingReader: "",
+  bibleReadingRef: "",
 
   part1Type: "Iniciando conversas",
   part1Speaker: "",
@@ -471,7 +475,9 @@ export function MidweekView() {
         talkSpeaker: f(meetingData.talkSpeaker),
         talkTheme: f(meetingData.talkTheme),
         gemsSpeaker: f(meetingData.gemsSpeaker),
+        gemsTheme: f(meetingData.gemsTheme),
         bibleReadingReader: f(meetingData.bibleReadingReader),
+        bibleReadingRef: f(meetingData.bibleReadingRef),
         part1Theme: f(meetingData.part1Theme), part1Speaker: f(meetingData.part1Speaker),
         part1Assistant: f(meetingData.part1Assistant), part1SecondHelper: f(meetingData.part1SecondHelper),
         part2Theme: f(meetingData.part2Theme), part2Speaker: f(meetingData.part2Speaker),

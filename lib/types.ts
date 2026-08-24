@@ -50,8 +50,10 @@ export interface MidweekMeetingData {
   talkTheme: string;
   talkDuration: number;
   gemsSpeaker: string;
+  gemsTheme: string;
   gemsDuration: number;
   bibleReadingReader: string;
+  bibleReadingRef: string;
   part1Type: string;
   part1Speaker: string;
   part1Theme: string;
