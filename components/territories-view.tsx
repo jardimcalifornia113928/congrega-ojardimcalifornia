@@ -47,6 +47,7 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import { toast } from 'sonner';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { TerritoryPdfPreviewModal } from '@/components/territory-pdf-preview-modal';
 import { RegistroPdfPreviewModal } from '@/components/registro-pdf-preview-modal';
 
@@ -161,21 +162,14 @@ function croppedImgStyle(crop: TerritoryCrop | null): React.CSSProperties {
   };
 }
 
-// Gera a imagem final do território: PNG base + rótulos desenhados + recorte salvo
-async function generateTerritoryImage(t: Territory): Promise<{ bytes: Uint8Array; fileName: string }> {
-  const res = await fetch(`/territorio/${t.number}.png`);
-  if (!res.ok) throw new Error('Imagem do território indisponível');
-  const blob = await res.blob();
-  const bitmap = await createImageBitmap(blob);
-
-  const canvas = document.createElement('canvas');
-  canvas.width = bitmap.width;
-  canvas.height = bitmap.height;
-  const ctx = canvas.getContext('2d')!;
-  ctx.drawImage(bitmap, 0, 0);
-
-  // A PNG é a rasterização da página de 1440 x 810 pt
-  const scale = bitmap.width / 1440;
+async function generateTerritoryPdf(t: Territory): Promise<Uint8Array> {
+  const res = await fetch(`/territorio/${t.number}.pdf`);
+  if (!res.ok) throw new Error('PDF do território indisponível');
+  const bytes = await res.arrayBuffer();
+  const pdfDoc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+  const page = pdfDoc.getPage(0);
+  const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const color = rgb(0.05, 0.08, 0.14);
 
   const values = {
     data: t.dataDesignacao ? formatDate(t.dataDesignacao) : '',
@@ -184,37 +178,31 @@ async function generateTerritoryImage(t: Territory): Promise<{ bytes: Uint8Array
     saida: t.saidaName || '',
   };
 
-  ctx.font = `bold ${12 * scale}px Arial, Helvetica, sans-serif`;
-  ctx.fillStyle = 'rgb(13, 20, 36)';
-  ctx.textBaseline = 'alphabetic';
-
   for (const field of TERRITORY_PDF_FIELDS) {
     const text = values[field.key];
     if (!text) continue;
-    const tx = (field.x + field.width + 3) * scale;
-    const ty = canvas.height - (field.y - 1.5) * scale;
-    ctx.fillText(text, tx, ty);
+    page.drawText(text, {
+      x: field.x + field.width + 3,
+      y: field.y - 1.5,
+      size: 12,
+      font,
+      color,
+    });
   }
 
-  // Aplica o recorte salvo (área útil do mapa) para a imagem ficar grande no WhatsApp/email
-  let outCanvas = canvas;
+  // Aplica o recorte salvo (área útil do mapa) para o mapa aparecer grande no WhatsApp/email
   const crop = await getTerritoryCrop();
   if (crop) {
-    const sx = crop.x * canvas.width;
-    const sy = crop.y * canvas.height;
-    const sw = crop.w * canvas.width;
-    const sh = crop.h * canvas.height;
-    const cropped = document.createElement('canvas');
-    cropped.width = Math.max(1, Math.round(sw));
-    cropped.height = Math.max(1, Math.round(sh));
-    cropped.getContext('2d')!.drawImage(canvas, sx, sy, sw, sh, 0, 0, cropped.width, cropped.height);
-    outCanvas = cropped;
+    const { width, height } = page.getSize();
+    const x = crop.x * width;
+    const y = (1 - crop.y - crop.h) * height;
+    const w = crop.w * width;
+    const h = crop.h * height;
+    page.setMediaBox(x, y, w, h);
+    page.setCropBox(x, y, w, h);
   }
 
-  const outBlob = await new Promise<Blob>((resolve, reject) =>
-    outCanvas.toBlob(b => (b ? resolve(b) : reject(new Error('Falha ao gerar imagem'))), 'image/png')
-  );
-  return { bytes: new Uint8Array(await outBlob.arrayBuffer()), fileName: `territorio-${t.number}.png` };
+  return pdfDoc.save();
 }
 
 export function TerritoriesView() {
@@ -222,7 +210,7 @@ export function TerritoriesView() {
   const [publishers, setPublishers] = React.useState<Publisher[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [sendingId, setSendingId] = React.useState<string | null>(null);
-  const [preview, setPreview] = React.useState<{ imageBytes: Uint8Array; fileName: string; territory: Territory } | null>(null);
+  const [preview, setPreview] = React.useState<{ pdfBytes: Uint8Array; fileName: string; territory: Territory } | null>(null);
   const [registroPreview, setRegistroPreview] = React.useState<{ territories: Territory[]; viewMonth: string; fileName: string } | null>(null);
   const [territoryCrop, setTerritoryCrop] = React.useState<TerritoryCrop | null>(null);
   const { user } = useAuth();
@@ -437,10 +425,10 @@ export function TerritoriesView() {
     setSendingId(t.id);
 
     try {
-      const { bytes, fileName } = await generateTerritoryImage(t);
+      const pdfBytes = await generateTerritoryPdf(t);
       setPreview({
-        imageBytes: bytes,
-        fileName,
+        pdfBytes,
+        fileName: `territorio-${t.number}.pdf`,
         territory: t,
       });
     } catch (error) {
@@ -919,7 +907,7 @@ export function TerritoriesView() {
 
       {preview && (
         <TerritoryPdfPreviewModal
-          imageBytes={preview.imageBytes}
+          pdfBytes={preview.pdfBytes}
           fileName={preview.fileName}
           shareText={`🗺️ Território Nº ${preview.territory.number}\nDirigente: ${preview.territory.dirigenteName || '—'}\nSaída de campo: ${preview.territory.saidaName || '—'}${preview.territory.dataDesignacao ? `\nData: ${formatDate(preview.territory.dataDesignacao)}` : ''}`}
           onClose={() => {
