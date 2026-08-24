@@ -436,8 +436,8 @@ function PrintLayout({ midweek, weekend, userEmail }: { midweek: MidweekPreviewD
           <Overlay id="weClosingPrayer" x={289} y={186} w={200} value={"Oração Final - " + (weekend.closingPrayer || "(sem designado)")} />
 
           {/* Talk theme & speaker */}
-          <Overlay id="weTalkTheme" x={10} y={169} w={380} value={weekend.talkTheme} />
-          <Overlay id="weTalkSpeaker" x={387} y={170} w={160} value={weekend.localSpeaker || weekend.visitingSpeaker || ''} />
+          <Overlay id="weTalkTheme" x={10} y={169} w={380} value={weekend.talkTheme ? "Tema - " + weekend.talkTheme : ""} />
+          <Overlay id="weTalkSpeaker" x={387} y={170} w={160} value={(weekend.localSpeaker || weekend.visitingSpeaker) ? "Orador - " + (weekend.localSpeaker || weekend.visitingSpeaker) : ""} />
 
           {/* Watchtower Study */}
           <Overlay id="weSentinelaLabel" x={10} y={148} w={145} value="Sentinela" fontSize={11} fontWeight="bold" />
