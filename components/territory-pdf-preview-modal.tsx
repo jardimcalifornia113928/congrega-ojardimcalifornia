@@ -1,15 +1,14 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Download, Printer, Share2, ZoomIn, ZoomOut, Maximize, Trash2, Plus, Check, Save, Scissors, FileDown } from 'lucide-react';
+import { X, Download, Printer, Share2, ZoomIn, ZoomOut, Maximize, Trash2, Plus, Check, Save, Scissors } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { PDFDocument } from 'pdf-lib';
 import { toast } from 'sonner';
 import { db } from '@/lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 
 interface Props {
-  pdfBytes: Uint8Array;
+  imageBytes: Uint8Array;
   fileName: string;
   shareText?: string;
   onClose: () => void;
@@ -29,7 +28,7 @@ const PDF_MM_H = 285.7; // 810pt
 
 const STORAGE_KEY = 'territory-pdf-selections';
 
-export function TerritoryPdfPreviewModal({ pdfBytes, fileName, shareText, onClose }: Props) {
+export function TerritoryPdfPreviewModal({ imageBytes, fileName, shareText, onClose }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pdfErrorRef = useRef<HTMLDivElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -54,48 +53,30 @@ export function TerritoryPdfPreviewModal({ pdfBytes, fileName, shareText, onClos
 
   useEffect(() => {
     let active = true;
-    let pdf: any = null;
+    const url = URL.createObjectURL(new Blob([imageBytes as BlobPart], { type: 'image/png' }));
 
-    async function load() {
-      try {
-        const pdfjsLib = await import('pdfjs-dist');
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@6.0.227/build/pdf.worker.min.mjs`;
+    const img = new Image();
+    img.onload = () => {
+      if (!active) return;
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const context = canvas.getContext('2d');
+      if (!context) return;
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      context.drawImage(img, 0, 0);
+      setPdfError(false);
+    };
+    img.onerror = () => {
+      if (active) setPdfError(true);
+    };
+    img.src = url;
 
-        const loadingTask = pdfjsLib.getDocument({ data: pdfBytes.slice() });
-        pdf = await loadingTask.promise;
-        if (!active) return;
-
-        const page = await pdf.getPage(1);
-        if (!active) return;
-
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        const context = canvas.getContext('2d');
-        if (!context) return;
-
-        const viewport = page.getViewport({ scale: 2 });
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-
-        await page.render({ canvasContext: context, viewport }).promise;
-        if (!active) return;
-      } catch (error) {
-        console.error('Erro ao renderizar PDF do território:', error);
-        if (active) setPdfError(true);
-      }
-    }
-
-    load();
     return () => {
       active = false;
-      if (pdf) {
-        try { pdf.destroy(); } catch { /* noop */ }
-      }
+      URL.revokeObjectURL(url);
     };
-  }, [pdfBytes]);
-
-  const getBlob = () => new Blob([pdfBytes as BlobPart], { type: 'application/pdf' });
+  }, [imageBytes]);
 
   const getImageBlob = () => {
     const canvas = canvasRef.current;
@@ -105,19 +86,7 @@ export function TerritoryPdfPreviewModal({ pdfBytes, fileName, shareText, onClos
     });
   };
 
-  const imageFileName = fileName.replace('.pdf', '.png');
-
-  const handleDownload = () => {
-    const url = URL.createObjectURL(getBlob());
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    toast.success('PDF baixado!');
-  };
+  const imageFileName = fileName.endsWith('.png') ? fileName : fileName.replace(/\.[^.]+$/, '.png');
 
   const handleDownloadImage = async () => {
     const blob = await getImageBlob();
@@ -136,16 +105,20 @@ export function TerritoryPdfPreviewModal({ pdfBytes, fileName, shareText, onClos
     toast.success('Imagem baixada!');
   };
 
-  const handlePrint = () => {
-    const url = URL.createObjectURL(getBlob());
-    const win = window.open(url, '_blank');
+  const handlePrint = async () => {
+    const blob = await getImageBlob();
+    if (!blob) {
+      toast.error('Imagem ainda não carregada.');
+      return;
+    }
+    const url = URL.createObjectURL(blob);
+    const win = window.open('', '_blank');
     if (!win) {
       toast.error('Pop-up bloqueado. Libere no navegador.');
       return;
     }
-    win.addEventListener('load', () => {
-      setTimeout(() => win.print(), 500);
-    });
+    win.document.write(`<!DOCTYPE html><html><head><title>${fileName}</title><style>*{margin:0;padding:0}img{width:100%}@page{size:landscape;margin:0}</style></head><body><img src="${url}" onload="setTimeout(function(){window.print()},300)"/></body></html>`);
+    win.document.close();
   };
 
   const handleShare = async () => {
@@ -292,35 +265,43 @@ export function TerritoryPdfPreviewModal({ pdfBytes, fileName, shareText, onClos
     setZoom(100);
   };
 
-  const cropPdf = async (s: Selection) => {
+  const cropImage = (s: Selection) => {
     try {
-      const doc = await PDFDocument.load(pdfBytes.slice(), { ignoreEncryption: true });
-      const page = doc.getPage(0);
-      const { width, height } = page.getSize();
+      const canvas = canvasRef.current;
+      if (!canvas || !canvas.width) {
+        toast.error('Imagem ainda não carregada.');
+        return;
+      }
 
-      // Converte frações (origem topo-esquerda do canvas) para pontos (origem inferior-esquerda do PDF)
-      const x = s.x * width;
-      const y = (1 - s.y - s.h) * height;
-      const w = s.w * width;
-      const h = s.h * height;
+      // Frações (origem topo-esquerda) aplicadas direto na imagem renderizada
+      const sx = s.x * canvas.width;
+      const sy = s.y * canvas.height;
+      const sw = s.w * canvas.width;
+      const sh = s.h * canvas.height;
 
-      page.setMediaBox(x, y, w, h);
-      page.setCropBox(x, y, w, h);
+      const cropped = document.createElement('canvas');
+      cropped.width = Math.max(1, Math.round(sw));
+      cropped.height = Math.max(1, Math.round(sh));
+      cropped.getContext('2d')!.drawImage(canvas, sx, sy, sw, sh, 0, 0, cropped.width, cropped.height);
 
-      const cropped = await doc.save();
-      const blob = new Blob([cropped as BlobPart], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName.replace('.pdf', '-recorte.pdf');
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      toast.success('PDF recortado baixado!');
+      cropped.toBlob(blob => {
+        if (!blob) {
+          toast.error('Erro ao recortar a imagem');
+          return;
+        }
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = imageFileName.replace(/\.png$/, '-recorte.png');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast.success('Imagem recortada baixada!');
+      }, 'image/png');
     } catch (error) {
-      console.error('Crop PDF error:', error);
-      toast.error('Erro ao recortar o PDF');
+      console.error('Crop image error:', error);
+      toast.error('Erro ao recortar a imagem');
     }
   };
 
@@ -369,14 +350,6 @@ export function TerritoryPdfPreviewModal({ pdfBytes, fileName, shareText, onClos
             <Download className="w-4 h-4" />
             <span className="hidden sm:inline">Baixar imagem</span>
           </Button>
-          <Button
-            onClick={handleDownload}
-            variant="outline"
-            className="h-9 border-[#1E293B] text-[#94A3B8] hover:text-white hover:border-[#334155] rounded-xl gap-2 px-3 sm:px-4 text-xs font-semibold"
-          >
-            <FileDown className="w-4 h-4" />
-            <span className="hidden sm:inline">Baixar PDF</span>
-          </Button>
         </div>
       </div>
 
@@ -389,7 +362,7 @@ export function TerritoryPdfPreviewModal({ pdfBytes, fileName, shareText, onClos
         >
           {pdfError ? (
             <div className="bg-[#0F172A] p-10 flex flex-col items-center gap-3">
-              <p className="text-sm font-bold text-red-400">Não foi possível exibir o PDF.</p>
+              <p className="text-sm font-bold text-red-400">Não foi possível exibir a imagem.</p>
               <p className="text-xs text-[#94A3B8]">Use os botões Baixar ou Imprimir.</p>
             </div>
           ) : (
@@ -473,12 +446,12 @@ export function TerritoryPdfPreviewModal({ pdfBytes, fileName, shareText, onClos
         )}
         {selection && (
           <button
-            onClick={() => cropPdf(selection)}
+            onClick={() => cropImage(selection)}
             className="px-4 py-1.5 rounded-lg transition-colors text-xs font-bold flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white"
-            title="Baixar PDF recortado somente com a área selecionada"
+            title="Baixar imagem recortada somente com a área selecionada"
           >
             <Scissors className="w-3.5 h-3.5" />
-            Recortar PDF
+            Recortar imagem
           </button>
         )}
         <button
