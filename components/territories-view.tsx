@@ -910,7 +910,10 @@ export function TerritoriesView() {
           pdfBytes={preview.pdfBytes}
           fileName={preview.fileName}
           shareText={`🗺️ Território Nº ${preview.territory.number}\nDirigente: ${preview.territory.dirigenteName || '—'}\nSaída de campo: ${preview.territory.saidaName || '—'}${preview.territory.dataDesignacao ? `\nData: ${formatDate(preview.territory.dataDesignacao)}` : ''}`}
-          onClose={() => setPreview(null)}
+          onClose={() => {
+            setPreview(null);
+            getTerritoryCrop().then(setTerritoryCrop);
+          }}
         />
       )}
 
