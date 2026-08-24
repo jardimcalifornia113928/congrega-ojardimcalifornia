@@ -183,7 +183,7 @@ async function generateTerritoryPdf(t: Territory): Promise<Uint8Array> {
     if (!text) continue;
     page.drawText(text, {
       x: field.x + field.width + 3,
-      y: field.y - 0.5,
+      y: field.y,
       size: 12,
       font,
       color,
