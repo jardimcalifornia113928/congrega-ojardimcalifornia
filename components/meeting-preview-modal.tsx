@@ -413,15 +413,15 @@ function PrintLayout({ midweek, weekend, userEmail }: { midweek: MidweekPreviewD
 
           {/* CBS section */}
           <Overlay id="cbsLabel" x={11} y={384} w={110} value="Estudo Bíblico" fontSize={11} fontWeight="bold" />
-          <Overlay id="cbsDir" x={121} y={385} w={200} value={midweek.cbsConductor || "—"} fontSize={11} />
-          <Overlay id="cbsLeitor" x={318} y={385} w={230} value={midweek.cbsReader ? "Leitor: " + midweek.cbsReader : "—"} fontSize={11} />
+          <Overlay id="cbsDir" x={117} y={384} w={200} value={midweek.cbsConductor || "—"} fontSize={11} />
+          <Overlay id="cbsLeitor" x={313} y={384} w={230} value={midweek.cbsReader ? "Leitor: " + midweek.cbsReader : "—"} fontSize={11} />
 
           {/* Mechanical parts (Midweek) */}
-          <Overlay id="mwMecInd1" x={99} y={320} w={200} value={midweek.mechanicalIndicador1} />
-          <Overlay id="mwMecMic1" x={99} y={295} w={200} value={midweek.mechanicalMicrofone1} />
-          <Overlay id="mwMecAV" x={98} y={271} w={200} value={midweek.mechanicalAudioVideo} />
-          <Overlay id="mwMecInd2" x={390} y={320} w={160} value={midweek.mechanicalIndicador2} />
-          <Overlay id="mwMecMic2" x={390} y={295} w={160} value={midweek.mechanicalMicrofone2} />
+          <Overlay id="mwMecInd1" x={101} y={321} w={200} value={midweek.mechanicalIndicador1} />
+          <Overlay id="mwMecMic1" x={100} y={296} w={200} value={midweek.mechanicalMicrofone1} />
+          <Overlay id="mwMecAV" x={101} y={271} w={200} value={midweek.mechanicalAudioVideo} />
+          <Overlay id="mwMecInd2" x={391} y={321} w={160} value={midweek.mechanicalIndicador2} />
+          <Overlay id="mwMecMic2" x={390} y={296} w={160} value={midweek.mechanicalMicrofone2} />
           <Overlay id="mwMecPalco" x={390} y={271} w={160} value={midweek.mechanicalPalco} />
 
           {/* FIM DE SEMANA */}
@@ -433,22 +433,22 @@ function PrintLayout({ midweek, weekend, userEmail }: { midweek: MidweekPreviewD
           )}
           <Overlay id="wePresident" x={10} y={199} w={250} value={"Presidente - " + (weekend.president || "(sem designado)")} />
           <Overlay id="weOpeningPrayer" x={289} y={201} w={220} value={"Oração Inicial - " + (weekend.openingPrayer || "(sem designado)")} />
-          <Overlay id="weClosingPrayer" x={290} y={188} w={200} value={"Oração Final - " + (weekend.closingPrayer || "(sem designado)")} />
+          <Overlay id="weClosingPrayer" x={289} y={188} w={200} value={"Oração Final - " + (weekend.closingPrayer || "(sem designado)")} />
 
           {/* Talk theme & speaker */}
-          <Overlay id="weTalkTheme" x={16} y={168} w={380} value={weekend.talkTheme} />
-          <Overlay id="weTalkSpeaker" x={412} y={167} w={160} value={weekend.localSpeaker || weekend.visitingSpeaker || ''} />
+          <Overlay id="weTalkTheme" x={10} y={169} w={380} value={weekend.talkTheme} />
+          <Overlay id="weTalkSpeaker" x={387} y={170} w={160} value={weekend.localSpeaker || weekend.visitingSpeaker || ''} />
 
           {/* Watchtower Study */}
-          <Overlay id="weWatchtowerCond" x={218} y={149} w={160} value={weekend.watchtowerConductor} />
-          <Overlay id="weWatchtowerReader" x={390} y={149} w={160} value={weekend.watchtowerReader} />
+          <Overlay id="weWatchtowerCond" x={161} y={148} w={160} value={weekend.watchtowerConductor} />
+          <Overlay id="weWatchtowerReader" x={377} y={148} w={160} value={weekend.watchtowerReader} />
 
           {/* Mechanical parts (Weekend) */}
-          <Overlay id="weMecInd1" x={98} y={81} w={200} value={weekend.mechanicalIndicador1} />
-          <Overlay id="weMecMic1" x={99} y={56} w={200} value={weekend.mechanicalMicrofone1} />
-          <Overlay id="weMecAV" x={97} y={33} w={200} value={weekend.mechanicalAudioVideo} />
-          <Overlay id="weMecMic2" x={391} y={57} w={160} value={weekend.mechanicalMicrofone2} />
-          <Overlay id="weMecPalco" x={390} y={32} w={160} value={weekend.mechanicalPalco} />
+          <Overlay id="weMecInd1" x={97} y={81} w={200} value={weekend.mechanicalIndicador1} />
+          <Overlay id="weMecMic1" x={98} y={57} w={200} value={weekend.mechanicalMicrofone1} />
+          <Overlay id="weMecAV" x={98} y={33} w={200} value={weekend.mechanicalAudioVideo} />
+          <Overlay id="weMecMic2" x={389} y={58} w={160} value={weekend.mechanicalMicrofone2} />
+          <Overlay id="weMecPalco" x={389} y={33} w={160} value={weekend.mechanicalPalco} />
         </div>
         {debug && (
           <div style={{ position: 'fixed', top: '72px', right: '16px', width: '280px', background: '#0F172A', border: '1px solid #1E293B', borderRadius: '8px', padding: '12px', fontSize: '12px', color: '#E2E8F0', maxHeight: 'calc(100vh - 96px)', overflowY: 'auto', fontFamily: 'monospace', zIndex: 99999 }}>

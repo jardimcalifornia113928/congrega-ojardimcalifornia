@@ -42,6 +42,7 @@ import {
   addDoc,
   deleteDoc,
   doc,
+  getDoc,
   updateDoc,
   serverTimestamp
 } from 'firebase/firestore';
@@ -131,10 +132,12 @@ interface TerritoryCrop {
 
 async function getTerritoryCrop(): Promise<TerritoryCrop | null> {
   try {
-    const res = await fetch('/api/territory-crop', { cache: 'no-store' });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data?.crop || null;
+    const snap = await getDoc(doc(db, 'settings', 'territory_crop'));
+    const sel = snap.data()?.selections?.[0];
+    if (sel && typeof sel.x === 'number' && typeof sel.w === 'number') {
+      return { x: sel.x, y: sel.y, w: sel.w, h: sel.h };
+    }
+    return null;
   } catch {
     return null;
   }

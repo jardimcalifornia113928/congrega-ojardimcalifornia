@@ -5,6 +5,8 @@ import { X, Download, Printer, Share2, ZoomIn, ZoomOut, Maximize, Trash2, Plus, 
 import { Button } from '@/components/ui/button';
 import { PDFDocument } from 'pdf-lib';
 import { toast } from 'sonner';
+import { db } from '@/lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
 interface Props {
   pdfBytes: Uint8Array;
@@ -274,16 +276,14 @@ export function TerritoryPdfPreviewModal({ pdfBytes, fileName, shareText, onClos
       return;
     }
     try {
-      const res = await fetch('/api/save-territory-selections', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ selections }),
-      });
-      if (!res.ok) throw new Error('Falha ao exportar');
-      toast.success('Posições exportadas para o servidor!');
+      await setDoc(doc(db, 'settings', 'territory_crop'), {
+        selections,
+        updatedAt: new Date().toISOString(),
+      }, { merge: true });
+      toast.success('Posições salvas na nuvem!');
     } catch (error) {
       console.error('Export selections error:', error);
-      toast.error('Erro ao exportar posições');
+      toast.error('Erro ao salvar posições');
     }
   };
 
