@@ -364,7 +364,7 @@ function PrintLayout({ midweek, weekend, userEmail }: { midweek: MidweekPreviewD
 
           {/* Superintendente Visit */}
           {midweek.showSuperVisit && (
-            <Overlay id="visitaHeader" x={16} y={799} w={495} value={"Semana Visita Superintendente " + midweek.superintendentName + " - " + midweek.superintendentWife} fontSize={11} fontWeight="bold" align="center" />
+            <Overlay id="visitaHeader" x={-15} y={799} w={495} value={"Semana Visita Superintendente " + midweek.superintendentName + " - " + midweek.superintendentWife} fontSize={11} fontWeight="bold" align="center" />
           )}
 
           {/* Midweek header */}
@@ -399,7 +399,7 @@ function PrintLayout({ midweek, weekend, userEmail }: { midweek: MidweekPreviewD
           {activeLife.map((life, i) => {
             const lifeSlots = [
               { y: 420, labelX: 11, labelW: 150, valX: 290, valW: 320 },
-              { y: 407, labelX: 10, labelW: 150, valX: 290, valW: 320 },
+              { y: 403, labelX: 10, labelW: 150, valX: 290, valW: 320 },
               { y: 516, labelX: 9, labelW: 150, valX: 281, valW: 320 },
             ];
             const slot = lifeSlots[i];
