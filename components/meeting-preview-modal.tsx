@@ -399,7 +399,7 @@ function PrintLayout({ midweek, weekend, userEmail }: { midweek: MidweekPreviewD
           {activeLife.map((life, i) => {
             const lifeSlots = [
               { y: 420, labelX: 11, labelW: 150, valX: 290, valW: 320 },
-              { y: 544, labelX: 11, labelW: 150, valX: 281, valW: 320 },
+              { y: 407, labelX: 10, labelW: 150, valX: 290, valW: 320 },
               { y: 516, labelX: 9, labelW: 150, valX: 281, valW: 320 },
             ];
             const slot = lifeSlots[i];
@@ -433,7 +433,7 @@ function PrintLayout({ midweek, weekend, userEmail }: { midweek: MidweekPreviewD
           )}
           <Overlay id="wePresident" x={10} y={199} w={250} value={"Presidente - " + (weekend.president || "(sem designado)")} />
           <Overlay id="weOpeningPrayer" x={289} y={201} w={220} value={"Oração Inicial - " + (weekend.openingPrayer || "(sem designado)")} />
-          <Overlay id="weClosingPrayer" x={289} y={188} w={200} value={"Oração Final - " + (weekend.closingPrayer || "(sem designado)")} />
+          <Overlay id="weClosingPrayer" x={289} y={186} w={200} value={"Oração Final - " + (weekend.closingPrayer || "(sem designado)")} />
 
           {/* Talk theme & speaker */}
           <Overlay id="weTalkTheme" x={10} y={169} w={380} value={weekend.talkTheme} />
