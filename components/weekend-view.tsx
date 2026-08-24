@@ -926,6 +926,9 @@ export function WeekendView() {
             mechanicalMicrofone2: meetingData.mechanicalMicrofone2,
             mechanicalPalco: meetingData.mechanicalPalco,
             mechanicalAudioVideo: meetingData.mechanicalAudioVideo,
+            showSuperVisit: meetingData.showSuperVisit,
+            superVisitTheme: meetingData.superVisitTheme,
+            superVisitSuperintendent: meetingData.superVisitSuperintendent,
           }}
           onClose={() => setShowPreview(false)}
           userEmail={user?.email || ''}

@@ -232,6 +232,9 @@ export function PrintsView() {
         mechanicalMicrofone2: fallback(wendDoc.mechanicalMicrofone2),
         mechanicalPalco: fallback(wendDoc.mechanicalPalco),
         mechanicalAudioVideo: fallback(wendDoc.mechanicalAudioVideo),
+        showSuperVisit: wendDoc.showSuperVisit ?? false,
+        superVisitTheme: fallback(wendDoc.superVisitTheme),
+        superVisitSuperintendent: fallback(wendDoc.superVisitSuperintendent),
       };
 
       setMidweekData(midData);

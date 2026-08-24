@@ -516,6 +516,9 @@ export function MidweekView() {
         mechanicalMicrofone2: f((wData as any).mechanicalMicrofone2),
         mechanicalPalco: f((wData as any).mechanicalPalco),
         mechanicalAudioVideo: f((wData as any).mechanicalAudioVideo),
+        showSuperVisit: (wData as any).showSuperVisit ?? false,
+        superVisitTheme: f((wData as any).superVisitTheme),
+        superVisitSuperintendent: f((wData as any).superVisitSuperintendent),
       });
 
       setShowPreview(true);

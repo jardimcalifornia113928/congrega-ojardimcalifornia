@@ -67,6 +67,9 @@ interface WeekendPreviewData {
   mechanicalMicrofone2: string;
   mechanicalAudioVideo: string;
   mechanicalPalco: string;
+  showSuperVisit?: boolean;
+  superVisitTheme?: string;
+  superVisitSuperintendent?: string;
 }
 
 interface Props {
@@ -425,10 +428,10 @@ function PrintLayout({ midweek, weekend, userEmail }: { midweek: MidweekPreviewD
           <Overlay id="mwMecPalco" x={390} y={271} w={160} value={midweek.mechanicalPalco} />
 
           {/* FIM DE SEMANA */}
-          {midweek.showSuperVisit && (
+          {(midweek.showSuperVisit || weekend.showSuperVisit) && (
             <>
-              <Overlay id="weSuperTema" x={10} y={365} w={290} value={"Tema - " + midweek.superVisitTheme} fontSize={11} />
-              <Overlay id="weSuperNome" x={319} y={365} w={245} value={"Super. Circuito - " + midweek.superVisitSuperintendent} fontSize={11} />
+              <Overlay id="weSuperTema" x={10} y={365} w={290} value={"Tema - " + (midweek.superVisitTheme || weekend.superVisitTheme || "")} fontSize={11} />
+              <Overlay id="weSuperNome" x={319} y={365} w={245} value={"Super. Circuito - " + (midweek.superVisitSuperintendent || weekend.superVisitSuperintendent || "")} fontSize={11} />
             </>
           )}
           <Overlay id="wePresident" x={10} y={199} w={250} value={"Presidente - " + (weekend.president || "(sem designado)")} />
