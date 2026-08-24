@@ -813,38 +813,8 @@ export function WeekendView() {
             </div>
           </div>
 
-          {/* Visita do Superintendente */}
-          {meetingData.showSuperVisit && (
-            <div className="border-t border-[#0EA5E9]/30 pt-4 mt-4">
-              <h4 className="text-[11px] font-black text-amber-400 uppercase tracking-wider mb-3">Visita do Superintendente</h4>
-              <div className="space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 py-1">
-                  <span className="w-full sm:w-60 text-xs text-[#94A3B8] font-bold shrink-0 print:text-black">Tema</span>
-                  <input
-                    type="text"
-                    maxLength={65}
-                    value={meetingData.superVisitTheme}
-                    onChange={(e) => updateField("superVisitTheme", e.target.value)}
-                    placeholder="Tema da visita (máx. 65 caracteres)"
-                    className="w-full bg-[#0F172A] border border-[#1E293B]/50 focus:border-[#0EA5E9] text-white rounded-lg px-3 py-1.5 h-10 text-xs focus:outline-none transition-all"
-                  />
-                </div>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 py-1">
-                  <span className="w-full sm:w-60 text-xs text-[#94A3B8] font-bold shrink-0 print:text-black">Superintendente</span>
-                  <select
-                    value={meetingData.superVisitSuperintendent}
-                    onChange={(e) => updateField("superVisitSuperintendent", e.target.value)}
-                    className="w-full bg-[#0F172A] border border-[#1E293B]/50 focus:border-[#0EA5E9] text-white rounded-lg px-3 py-1.5 h-10 text-xs focus:outline-none transition-all"
-                  >
-                    <option value="">Selecionar...</option>
-                    {superintendentName && (
-                      <option value={superintendentName}>{superintendentName}</option>
-                    )}
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Visita do Superintendente: gerenciada na tela Meio de Semana.
+              Aqui exibe apenas o selo informativo no cabeçalho. */}
 
         </div>
       </div>
