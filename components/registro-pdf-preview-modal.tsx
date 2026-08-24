@@ -161,8 +161,50 @@ export function RegistroPdfPreviewModal({ territories, viewMonth, fileName, user
       const canvas = pageEl.querySelector('canvas') as HTMLCanvasElement;
       if (!canvas) return;
 
+      // Composição igual ao download de PDF: fundo + textos nas posições efetivas
+      const overlayEls = pageEl.querySelectorAll('[data-registro-overlays] > div');
+      const cssW = pageEl.clientWidth || canvas.clientWidth;
+      const cssH = pageEl.clientHeight || canvas.clientHeight;
+      const sx = canvas.width / cssW;
+      const sy = canvas.height / cssH;
+
+      const finalCanvas = document.createElement('canvas');
+      finalCanvas.width = canvas.width;
+      finalCanvas.height = canvas.height;
+      const ctx = finalCanvas.getContext('2d')!;
+      ctx.drawImage(canvas, 0, 0);
+
+      overlayEls.forEach((el) => {
+        const htmlEl = el as HTMLElement;
+        const text = htmlEl.textContent || '';
+        if (!text.trim()) return;
+
+        const left = parseFloat(htmlEl.style.left) || 0;
+        const top = parseFloat(htmlEl.style.top) || 0;
+        const width = parseFloat(htmlEl.style.width) || 0;
+        const fontSize = parseFloat(htmlEl.style.fontSize) || 9;
+
+        const cx = left * sx;
+        const cy = top * sy;
+        const cwE = width * sx;
+        const chE = 14 * sy;
+
+        ctx.font = `bold ${fontSize * sx}px Arial, Helvetica, sans-serif`;
+        ctx.fillStyle = '#111827';
+        ctx.textBaseline = 'middle';
+
+        const align = htmlEl.style.textAlign || 'left';
+        const padding = 2 * sx;
+        let tx = cx + padding;
+        let ta: CanvasTextAlign = 'left';
+        if (align === 'right') { tx = cx + cwE - padding; ta = 'right'; }
+        else if (align === 'center') { tx = cx + cwE / 2; ta = 'center'; }
+        ctx.textAlign = ta;
+        ctx.fillText(text, tx, cy + chE / 2);
+      });
+
       const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob(b => b ? resolve(b) : reject(new Error('Falha ao gerar imagem')), 'image/png');
+        finalCanvas.toBlob(b => b ? resolve(b) : reject(new Error('Falha ao gerar imagem')), 'image/png');
       });
 
       const file = new File([blob], 'registro-s13.png', { type: 'image/png' });

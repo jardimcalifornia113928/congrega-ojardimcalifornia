@@ -197,7 +197,7 @@ export function RegistroPrintLayout({ territories, viewMonth, userEmail }: { ter
     let active = true;
     async function loadPdf() {
       try {
-        const res = await fetch('/api/registro-pdf', { cache: 'no-store' });
+        const res = await fetch('/territorio/registro-territorio.pdf', { cache: 'no-store' });
         if (!res.ok) throw new Error('Modelo indisponível');
         const buffer = await res.arrayBuffer();
 
