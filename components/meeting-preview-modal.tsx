@@ -428,12 +428,18 @@ function PrintLayout({ midweek, weekend, userEmail }: { midweek: MidweekPreviewD
           <Overlay id="mwMecPalco" x={390} y={271} w={160} value={midweek.mechanicalPalco} />
 
           {/* FIM DE SEMANA */}
-          {(midweek.showSuperVisit || weekend.showSuperVisit) && (
-            <>
-              <Overlay id="weSuperTema" x={10} y={365} w={290} value={"Tema - " + (midweek.superVisitTheme || weekend.superVisitTheme || "")} fontSize={11} />
-              <Overlay id="weSuperNome" x={319} y={365} w={245} value={"Orador - " + (midweek.superVisitSuperintendent || weekend.superVisitSuperintendent || "")} fontSize={11} />
-            </>
-          )}
+          {(() => {
+            const visitTema = midweek.superVisitTheme || weekend.superVisitTheme || "";
+            const visitOrador = midweek.superVisitSuperintendent || weekend.superVisitSuperintendent || "";
+            const visitActive = !!(midweek.showSuperVisit || weekend.showSuperVisit);
+            const showVisit = visitActive || v(visitTema) || v(visitOrador);
+            return showVisit ? (
+              <>
+                <Overlay id="weSuperTema" x={10} y={365} w={290} value={"Tema - " + visitTema} fontSize={11} />
+                <Overlay id="weSuperNome" x={319} y={365} w={245} value={"Orador - " + visitOrador} fontSize={11} />
+              </>
+            ) : null;
+          })()}
           <Overlay id="wePresident" x={10} y={199} w={250} value={"Presidente - " + (weekend.president || "(sem designado)")} />
           <Overlay id="weOpeningPrayer" x={289} y={201} w={220} value={"Oração Inicial - " + (weekend.openingPrayer || "(sem designado)")} />
           <Overlay id="weClosingPrayer" x={288} y={186} w={200} value={"Oração Final - " + (weekend.closingPrayer || "(sem designado)")} />
