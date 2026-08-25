@@ -813,8 +813,35 @@ export function WeekendView() {
             </div>
           </div>
 
-          {/* Visita do Superintendente: gerenciada na tela Meio de Semana.
-              Aqui exibe apenas o selo informativo no cabeçalho. */}
+          {/* Visita do Superintendente - Tema e Orador (abaixo de Sentinela/Leitor) */}
+          {meetingData.showSuperVisit && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider block mb-1">Tema da Visita</label>
+                <input
+                  type="text"
+                  maxLength={65}
+                  value={meetingData.superVisitTheme}
+                  onChange={(e) => updateField("superVisitTheme", e.target.value)}
+                  placeholder="Tema da visita (máx. 65 caracteres)"
+                  className="w-full bg-[#0F172A] border border-[#1E293B]/50 focus:border-[#0EA5E9] text-white rounded-lg px-3 py-1.5 h-10 text-xs focus:outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider block mb-1">Orador (Super. Circuito)</label>
+                <select
+                  value={meetingData.superVisitSuperintendent}
+                  onChange={(e) => updateField("superVisitSuperintendent", e.target.value)}
+                  className="w-full bg-[#0F172A] border border-[#1E293B]/50 focus:border-[#0EA5E9] text-white rounded-lg px-3 py-1.5 h-10 text-xs focus:outline-none transition-all"
+                >
+                  <option value="">Selecionar...</option>
+                  {superintendentName && (
+                    <option value={superintendentName}>{superintendentName}</option>
+                  )}
+                </select>
+              </div>
+            </div>
+          )}
 
         </div>
       </div>
