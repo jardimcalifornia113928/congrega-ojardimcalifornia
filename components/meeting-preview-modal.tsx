@@ -366,8 +366,8 @@ function PrintLayout({ midweek, weekend, userEmail }: { midweek: MidweekPreviewD
           <Overlay id="weekRange" x={415} y={798} w={142} value={midweek.weekRange.toUpperCase() + ' |'} align="right" fontSize={11} />
 
           {/* Superintendente Visit */}
-          {midweek.showSuperVisit && (
-            <Overlay id="visitaHeader" x={-15} y={799} w={495} value={"Semana Visita Superintendente " + midweek.superintendentName + " - " + midweek.superintendentWife} fontSize={11} fontWeight="bold" align="center" />
+          {(midweek.showSuperVisit || weekend.showSuperVisit) && (
+            <Overlay id="visitaHeader" x={-15} y={799} w={495} value={"Semana Visita Superintendente " + ((midweek.superintendentName || "") + " - " + (midweek.superintendentWife || "")).trim()} fontSize={11} fontWeight="bold" align="center" />
           )}
 
           {/* Midweek header */}
