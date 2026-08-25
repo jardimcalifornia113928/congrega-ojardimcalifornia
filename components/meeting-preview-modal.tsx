@@ -99,7 +99,7 @@ interface OverlayProps {
   fontWeight?: string;
 }
 
-function v(s: string): boolean {
+function v(s: string | undefined | null): boolean {
   return !!s && s.trim() !== '';
 }
 
@@ -429,14 +429,24 @@ function PrintLayout({ midweek, weekend, userEmail }: { midweek: MidweekPreviewD
 
           {/* FIM DE SEMANA */}
           {(() => {
-            const visitTema = midweek.superVisitTheme || weekend.superVisitTheme || "";
-            const visitOrador = midweek.superVisitSuperintendent || weekend.superVisitSuperintendent || "";
+            const mwHas = v(midweek.superVisitTheme) || v(midweek.superVisitSuperintendent);
+            const weHas = v(weekend.superVisitTheme) || v(weekend.superVisitSuperintendent);
             const visitActive = !!(midweek.showSuperVisit || weekend.showSuperVisit);
-            const showVisit = visitActive || v(visitTema) || v(visitOrador);
+            const showVisit = visitActive || mwHas || weHas;
             return showVisit ? (
               <>
-                <Overlay id="weSuperTema" x={10} y={365} w={290} value={"Tema - " + visitTema} fontSize={11} />
-                <Overlay id="weSuperNome" x={319} y={365} w={245} value={"Orador - " + visitOrador} fontSize={11} />
+                {mwHas && (
+                  <>
+                    <Overlay id="weSuperTema" x={10} y={365} w={290} value={"Tema - " + (midweek.superVisitTheme || "")} fontSize={11} />
+                    <Overlay id="weSuperNome" x={319} y={365} w={245} value={"Orador - " + (midweek.superVisitSuperintendent || "")} fontSize={11} />
+                  </>
+                )}
+                {weHas && (
+                  <>
+                    <Overlay id="weSuperTema2" x={10} y={340} w={290} value={"Tema - " + (weekend.superVisitTheme || "")} fontSize={11} />
+                    <Overlay id="weSuperNome2" x={319} y={340} w={245} value={"Orador - " + (weekend.superVisitSuperintendent || "")} fontSize={11} />
+                  </>
+                )}
               </>
             ) : null;
           })()}
