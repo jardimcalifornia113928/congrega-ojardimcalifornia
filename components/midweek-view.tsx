@@ -672,7 +672,17 @@ export function MidweekView() {
             <Button
               onClick={(e) => {
                 e.stopPropagation();
-                if (isAdmin) setMeetingData(prev => ({ ...prev, showSuperVisit: !prev.showSuperVisit }));
+                if (isAdmin) {
+                  const next = !meetingData.showSuperVisit;
+                  setMeetingData(prev => ({ ...prev, showSuperVisit: next }));
+                  // Propagação imediata da flag para as duas reuniões (sem depender do Salvar)
+                  setDoc(doc(db, 'midweek_meetings', mondayStr), { showSuperVisit: next }, { merge: true })
+                    .then(() => setDoc(doc(db, 'weekend_meetings', mondayStr), { showSuperVisit: next }, { merge: true }))
+                    .catch((err) => {
+                      console.error('Erro ao propagar visita:', err);
+                      toast.error('Erro ao ativar/desativar a visita.');
+                    });
+                }
               }}
               className={`h-10 font-bold rounded-xl px-4 text-xs gap-2 ${meetingData.showSuperVisit ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'bg-[#1E293B] hover:bg-[#334155] text-[#94A3B8]'} border border-[#1E293B] ${!isAdmin ? 'opacity-50 cursor-not-allowed' : ''} no-print`}
               title={!isAdmin ? "Apenas administradores podem ativar" : ""}

@@ -212,6 +212,7 @@ export function WeekendView() {
   const [midweekData, setMidweekData] = useState<MidweekPreviewData | null>(null);
   const [savedWeeks, setSavedWeeks] = useState<string[]>([]);
   const [superintendentName, setSuperintendentName] = useState("");
+const [superintendentWife, setSuperintendentWife] = useState("");
 
   const getMondayStr = (date: Date): string => {
     const d = new Date(date);
@@ -362,8 +363,8 @@ export function WeekendView() {
           superVisitTheme: f(d.superVisitTheme),
           superVisitSuperintendent: f(d.superVisitSuperintendent),
           showSuperVisit: d.showSuperVisit ?? false,
-          superintendentName: f(d.superintendentName),
-          superintendentWife: f(d.superintendentWife),
+          superintendentName: f(superintendentName) || f(d.superintendentName),
+          superintendentWife: f(superintendentWife) || f(d.superintendentWife),
           mechanicalIndicador1: f(d.mechanicalIndicador1),
           mechanicalIndicador2: f(d.mechanicalIndicador2),
           mechanicalMicrofone1: f(d.mechanicalMicrofone1),
@@ -395,6 +396,7 @@ export function WeekendView() {
       if (snap.exists()) {
         const data = snap.data();
         setSuperintendentName(data.circuitSuperintendent || "");
+        setSuperintendentWife(data.circuitSuperintendentWife || "");
       }
     });
     return () => unsubscribe();
@@ -933,7 +935,7 @@ export function WeekendView() {
             lifePart3Theme: '', lifePart3Speaker: '',
             cbsConductor: '', cbsReader: '',
             superVisitTheme: '', superVisitSuperintendent: '', showSuperVisit: false,
-            superintendentName: '', superintendentWife: '',
+            superintendentName: superintendentName, superintendentWife: superintendentWife,
             mechanicalIndicador1: '', mechanicalIndicador2: '',
             mechanicalMicrofone1: '', mechanicalMicrofone2: '',
             mechanicalPalco: '', mechanicalAudioVideo: '',
