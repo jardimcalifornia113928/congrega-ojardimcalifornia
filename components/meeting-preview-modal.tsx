@@ -305,9 +305,9 @@ function PrintLayout({ midweek, weekend, userEmail }: { midweek: MidweekPreviewD
 
   // Slots positions in PDF points (width 595, height 842)
   const ministeriosSlots = [
-    { y: 573, labelX: 11, labelW: 150, valX: 149, valW: 320 },
-    { y: 544, labelX: 11, labelW: 150, valX: 150, valW: 320 },
-    { y: 516, labelX: 10, labelW: 150, valX: 150, valW: 320 },
+    { y: 573, labelX: 11, labelW: 150, valX: 169, valW: 320 },
+    { y: 544, labelX: 11, labelW: 150, valX: 170, valW: 320 },
+    { y: 516, labelX: 10, labelW: 150, valX: 170, valW: 320 },
     { y: 486, labelX: 11, labelW: 150, valX: 151, valW: 320 },
   ];
 
@@ -363,11 +363,11 @@ function PrintLayout({ midweek, weekend, userEmail }: { midweek: MidweekPreviewD
         >
           {gridVisible && <Grid gridStep={gridStep} />}
           {/* Week range */}
-          <Overlay id="weekRange" x={415} y={798} w={142} value={midweek.weekRange.toUpperCase() + ' |'} align="right" fontSize={11} />
+          <Overlay id="weekRange" x={445} y={798} w={142} value={midweek.weekRange.toUpperCase() + ' |'} align="right" fontSize={11} />
 
           {/* Superintendente Visit */}
           {(midweek.showSuperVisit || weekend.showSuperVisit) && (
-            <Overlay id="visitaHeader" x={-15} y={799} w={495} value={"Semana Visita Superintendente " + ((midweek.superintendentName || "") + " - " + (midweek.superintendentWife || "")).trim()} fontSize={11} fontWeight="bold" align="center" />
+            <Overlay id="visitaHeader" x={-66} y={799} w={495} value={"Semana Visita Superintendente " + ((midweek.superintendentName || "") + " - " + (midweek.superintendentWife || "")).trim()} fontSize={11} fontWeight="bold" align="center" />
           )}
 
           {/* Midweek header */}
@@ -381,7 +381,7 @@ function PrintLayout({ midweek, weekend, userEmail }: { midweek: MidweekPreviewD
           <Overlay id="mwGemsTheme" x={11} y={674} w={290} value="02 - Jóias" />
           <Overlay id="mwGemsSpeaker" x={281} y={673} w={230} value={midweek.gemsSpeaker} />
           <Overlay id="mwBibleReadingRef" x={11} y={648} w={290} value="03 - Leitura da Biblia" />
-          <Overlay id="mwBibleReading" x={282} y={648} w={230} value={midweek.bibleReadingReader} />
+          <Overlay id="mwBibleReading" x={280} y={648} w={230} value={midweek.bibleReadingReader} />
 
           {/* Faça Seu Melhor (Ministry) */}
           {ministeriosSlots.map((slot, i) => {
@@ -417,7 +417,7 @@ function PrintLayout({ midweek, weekend, userEmail }: { midweek: MidweekPreviewD
           {/* CBS section */}
           <Overlay id="cbsLabel" x={10} y={384} w={110} value="Estudo Bíblico" fontSize={11} fontWeight="bold" />
           <Overlay id="cbsDir" x={117} y={384} w={200} value={midweek.cbsConductor || "—"} fontSize={11} />
-          <Overlay id="cbsLeitor" x={313} y={384} w={230} value={midweek.cbsReader ? "Leitor: " + midweek.cbsReader : "—"} fontSize={11} />
+          <Overlay id="cbsLeitor" x={320} y={384} w={230} value={midweek.cbsReader ? "Leitor: " + midweek.cbsReader : "—"} fontSize={11} />
 
           {/* Mechanical parts (Midweek) */}
           <Overlay id="mwMecInd1" x={101} y={321} w={200} value={midweek.mechanicalIndicador1} />
@@ -443,25 +443,25 @@ function PrintLayout({ midweek, weekend, userEmail }: { midweek: MidweekPreviewD
                 )}
                 {weHas && (
                   <>
-                    <Overlay id="weSuperTema2" x={10} y={340} w={290} value={"Tema - " + (weekend.superVisitTheme || "")} fontSize={11} />
-                    <Overlay id="weSuperNome2" x={319} y={340} w={245} value={"Orador - " + (weekend.superVisitSuperintendent || "")} fontSize={11} />
+                    <Overlay id="weSuperTema2" x={10} y={119} w={290} value={"Tema - " + (weekend.superVisitTheme || "")} fontSize={11} />
+                    <Overlay id="weSuperNome2" x={310} y={119} w={245} value={"Orador - " + (weekend.superVisitSuperintendent || "")} fontSize={11} />
                   </>
                 )}
               </>
             ) : null;
           })()}
           <Overlay id="wePresident" x={10} y={199} w={250} value={"Presidente - " + (weekend.president || "(sem designado)")} />
-          <Overlay id="weOpeningPrayer" x={289} y={201} w={220} value={"Oração Inicial - " + (weekend.openingPrayer || "(sem designado)")} />
-          <Overlay id="weClosingPrayer" x={288} y={186} w={200} value={"Oração Final - " + (weekend.closingPrayer || "(sem designado)")} />
+          <Overlay id="weOpeningPrayer" x={289} y={198} w={220} value={"Oração Inicial - " + (weekend.openingPrayer || "(sem designado)")} />
+          <Overlay id="weClosingPrayer" x={289} y={185} w={200} value={"Oração Final - " + (weekend.closingPrayer || "(sem designado)")} />
 
           {/* Talk theme & speaker */}
-          <Overlay id="weTalkTheme" x={10} y={169} w={380} value={weekend.talkTheme ? "Tema - " + weekend.talkTheme : ""} />
-          <Overlay id="weTalkSpeaker" x={355} y={170} w={160} value={(weekend.localSpeaker || weekend.visitingSpeaker) ? "Orador - " + (weekend.localSpeaker || weekend.visitingSpeaker) : ""} />
+          <Overlay id="weTalkTheme" x={9} y={165} w={380} value={weekend.talkTheme ? "Tema - " + weekend.talkTheme : ""} />
+          <Overlay id="weTalkSpeaker" x={356} y={166} w={160} value={(weekend.localSpeaker || weekend.visitingSpeaker) ? "Orador - " + (weekend.localSpeaker || weekend.visitingSpeaker) : ""} />
 
           {/* Watchtower Study */}
-          <Overlay id="weSentinelaLabel" x={10} y={148} w={145} value="Sentinela" fontSize={11} fontWeight="bold" />
-          <Overlay id="weWatchtowerCond" x={79} y={148} w={210} value={weekend.watchtowerConductor || "\u2014"} />
-          <Overlay id="weWatchtowerReader" x={290} y={148} w={180} value={weekend.watchtowerReader ? "Leitor: " + weekend.watchtowerReader : "\u2014"} />
+          <Overlay id="weSentinelaLabel" x={9} y={142} w={145} value="Sentinela" fontSize={11} fontWeight="bold" />
+          <Overlay id="weWatchtowerCond" x={80} y={143} w={210} value={weekend.watchtowerConductor || "\u2014"} />
+          <Overlay id="weWatchtowerReader" x={310} y={142} w={180} value={weekend.watchtowerReader ? "Leitor: " + weekend.watchtowerReader : "\u2014"} />
 
           {/* Mechanical parts (Weekend) */}
           <Overlay id="weMecInd1" x={97} y={81} w={200} value={weekend.mechanicalIndicador1} />
