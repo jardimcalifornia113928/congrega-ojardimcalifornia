@@ -788,6 +788,7 @@ const [superintendentWife, setSuperintendentWife] = useState("");
               <option value="192. Você está no caminho para a vida eterna?">192. Você está no caminho para a vida eterna?</option>
               <option value="193. Os problemas de hoje logo serão coisa do passado">193. Os problemas de hoje logo serão coisa do passado</option>
               <option value="194. Como a sabedoria de Deus nos ajuda">194. Como a sabedoria de Deus nos ajuda</option>
+              <option value="A História e o Ministério de Jesus, episódio 2, parte 1">A História e o Ministério de Jesus, episódio 2, parte 1</option>
             </select>
           </div>
 

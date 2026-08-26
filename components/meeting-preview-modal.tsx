@@ -367,7 +367,7 @@ function PrintLayout({ midweek, weekend, userEmail }: { midweek: MidweekPreviewD
 
           {/* Superintendente Visit */}
           {(midweek.showSuperVisit || weekend.showSuperVisit) && (
-            <Overlay id="visitaHeader" x={-66} y={799} w={495} value={"Semana Visita Superintendente " + ((midweek.superintendentName || "") + " - " + (midweek.superintendentWife || "")).trim()} fontSize={11} fontWeight="bold" align="center" />
+            <Overlay id="visitaHeader" x={-47} y={799} w={495} value={"Semana Visita Superintendente " + ((midweek.superintendentName || "") + " - " + (midweek.superintendentWife || "")).trim()} fontSize={11} fontWeight="bold" align="center" />
           )}
 
           {/* Midweek header */}
@@ -443,8 +443,8 @@ function PrintLayout({ midweek, weekend, userEmail }: { midweek: MidweekPreviewD
                 )}
                 {weHas && (
                   <>
-                    <Overlay id="weSuperTema2" x={10} y={119} w={290} value={"Tema - " + (weekend.superVisitTheme || "")} fontSize={11} />
-                    <Overlay id="weSuperNome2" x={310} y={119} w={245} value={"Orador - " + (weekend.superVisitSuperintendent || "")} fontSize={11} />
+                    <Overlay id="weSuperTema2" x={9} y={123} w={290} value={"Tema - " + (weekend.superVisitTheme || "")} fontSize={11} />
+                    <Overlay id="weSuperNome2" x={310} y={123} w={245} value={"Orador - " + (weekend.superVisitSuperintendent || "")} fontSize={11} />
                   </>
                 )}
               </>
