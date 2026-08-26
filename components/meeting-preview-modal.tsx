@@ -401,8 +401,8 @@ function PrintLayout({ midweek, weekend, userEmail }: { midweek: MidweekPreviewD
           {/* Nossa Vida Cristã section */}
           {activeLife.map((life, i) => {
             const lifeSlots = [
-              { y: 420, labelX: 11, labelW: 150, valX: 290, valW: 320 },
-              { y: 403, labelX: 10, labelW: 150, valX: 290, valW: 320 },
+              { y: 419, labelX: 15, labelW: 150, valX: 290, valW: 320 },
+              { y: 403, labelX: 15, labelW: 150, valX: 290, valW: 320 },
               { y: 516, labelX: 9, labelW: 150, valX: 281, valW: 320 },
             ];
             const slot = lifeSlots[i];
@@ -415,17 +415,17 @@ function PrintLayout({ midweek, weekend, userEmail }: { midweek: MidweekPreviewD
           })}
 
           {/* CBS section */}
-          <Overlay id="cbsLabel" x={10} y={384} w={110} value="Estudo Bíblico" fontSize={11} fontWeight="bold" />
+          <Overlay id="cbsLabel" x={15} y={383} w={110} value="Estudo Bíblico" fontSize={11} fontWeight="bold" />
           <Overlay id="cbsDir" x={117} y={384} w={200} value={midweek.cbsConductor || "—"} fontSize={11} />
           <Overlay id="cbsLeitor" x={320} y={384} w={230} value={midweek.cbsReader ? "Leitor: " + midweek.cbsReader : "—"} fontSize={11} />
 
           {/* Mechanical parts (Midweek) */}
-          <Overlay id="mwMecInd1" x={101} y={321} w={200} value={midweek.mechanicalIndicador1} />
-          <Overlay id="mwMecMic1" x={100} y={296} w={200} value={midweek.mechanicalMicrofone1} />
-          <Overlay id="mwMecAV" x={101} y={271} w={200} value={midweek.mechanicalAudioVideo} />
-          <Overlay id="mwMecInd2" x={391} y={321} w={160} value={midweek.mechanicalIndicador2} />
-          <Overlay id="mwMecMic2" x={390} y={296} w={160} value={midweek.mechanicalMicrofone2} />
-          <Overlay id="mwMecPalco" x={390} y={271} w={160} value={midweek.mechanicalPalco} />
+          <Overlay id="mwMecInd1" x={16} y={322} w={200} value={"Indicador 1 - " + (midweek.mechanicalIndicador1 || "")} />
+          <Overlay id="mwMecMic1" x={16} y={292} w={200} value={"Microfone 1 - " + (midweek.mechanicalMicrofone1 || "")} />
+          <Overlay id="mwMecAV" x={17} y={263} w={200} value={"Áudio e Vídeo - " + (midweek.mechanicalAudioVideo || "")} />
+          <Overlay id="mwMecInd2" x={331} y={321} w={160} value={"Indicador 2 - " + (midweek.mechanicalIndicador2 || "")} />
+          <Overlay id="mwMecMic2" x={331} y={293} w={160} value={"Microfone 2 - " + (midweek.mechanicalMicrofone2 || "")} />
+          <Overlay id="mwMecPalco" x={331} y={262} w={160} value={"Palco - " + (midweek.mechanicalPalco || "")} />
 
           {/* FIM DE SEMANA */}
           {(() => {
@@ -450,26 +450,26 @@ function PrintLayout({ midweek, weekend, userEmail }: { midweek: MidweekPreviewD
               </>
             ) : null;
           })()}
-          <Overlay id="wePresident" x={10} y={199} w={250} value={"Presidente - " + (weekend.president || "(sem designado)")} />
+          <Overlay id="wePresident" x={16} y={199} w={250} value={"Presidente - " + (weekend.president || "(sem designado)")} />
           <Overlay id="weOpeningPrayer" x={289} y={198} w={220} value={"Oração Inicial - " + (weekend.openingPrayer || "(sem designado)")} />
           <Overlay id="weClosingPrayer" x={289} y={185} w={200} value={"Oração Final - " + (weekend.closingPrayer || "(sem designado)")} />
 
           {/* Talk theme & speaker */}
-          <Overlay id="weTalkTheme" x={9} y={165} w={380} value={weekend.talkTheme ? "Tema - " + weekend.talkTheme : ""} />
+          <Overlay id="weTalkTheme" x={15} y={166} w={380} value={weekend.talkTheme ? "Tema - " + weekend.talkTheme : ""} />
           <Overlay id="weTalkSpeaker" x={356} y={166} w={160} value={(weekend.localSpeaker || weekend.visitingSpeaker) ? "Orador - " + (weekend.localSpeaker || weekend.visitingSpeaker) : ""} />
 
           {/* Watchtower Study */}
-          <Overlay id="weSentinelaLabel" x={9} y={142} w={145} value="Sentinela" fontSize={11} fontWeight="bold" />
+          <Overlay id="weSentinelaLabel" x={14} y={143} w={145} value="Sentinela" fontSize={11} fontWeight="bold" />
           <Overlay id="weWatchtowerCond" x={80} y={143} w={210} value={weekend.watchtowerConductor || "\u2014"} />
           <Overlay id="weWatchtowerReader" x={310} y={142} w={180} value={weekend.watchtowerReader ? "Leitor: " + weekend.watchtowerReader : "\u2014"} />
 
           {/* Mechanical parts (Weekend) */}
-          <Overlay id="weMecInd1" x={97} y={81} w={200} value={weekend.mechanicalIndicador1} />
-          <Overlay id="weMecMic1" x={98} y={57} w={200} value={weekend.mechanicalMicrofone1} />
-          <Overlay id="weMecAV" x={98} y={33} w={200} value={weekend.mechanicalAudioVideo} />
-          <Overlay id="weMecInd2" x={389} y={83} w={160} value={weekend.mechanicalIndicador2} />
-          <Overlay id="weMecMic2" x={389} y={58} w={160} value={weekend.mechanicalMicrofone2} />
-          <Overlay id="weMecPalco" x={389} y={33} w={160} value={weekend.mechanicalPalco} />
+          <Overlay id="weMecInd1" x={15} y={80} w={200} value={"Indicador 1 - " + (weekend.mechanicalIndicador1 || "")} />
+          <Overlay id="weMecMic1" x={16} y={59} w={200} value={"Microfone 1 - " + (weekend.mechanicalMicrofone1 || "")} />
+          <Overlay id="weMecAV" x={14} y={34} w={200} value={"Áudio e Vídeo - " + (weekend.mechanicalAudioVideo || "")} />
+          <Overlay id="weMecInd2" x={331} y={81} w={160} value={"Indicador 2 - " + (weekend.mechanicalIndicador2 || "")} />
+          <Overlay id="weMecMic2" x={331} y={58} w={160} value={"Microfone 2 - " + (weekend.mechanicalMicrofone2 || "")} />
+          <Overlay id="weMecPalco" x={331} y={33} w={160} value={"Palco - " + (weekend.mechanicalPalco || "")} />
         </div>
         {debug && (
           <div style={{ position: 'fixed', top: '72px', right: '16px', width: '280px', background: '#0F172A', border: '1px solid #1E293B', borderRadius: '8px', padding: '12px', fontSize: '12px', color: '#E2E8F0', maxHeight: 'calc(100vh - 96px)', overflowY: 'auto', fontFamily: 'monospace', zIndex: 99999 }}>
