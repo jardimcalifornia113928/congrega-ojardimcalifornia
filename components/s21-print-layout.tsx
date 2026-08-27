@@ -237,9 +237,6 @@ export function S21PrintLayout({ publisher, s21Data, serviceYear }: Props) {
 
       {isLoaded && (
         <div data-s21-overlays style={{ position: 'absolute', top: 0, left: 0, width: `${cssW}px`, height: `${cssH}px`, zIndex: 10, pointerEvents: 'none' }}>
-          {/* Red A debug marker at nome position */}
-          <div style={{ position: 'absolute', left: `${(51.49 + dx) * scale}px`, top: `${(64.04 + dy) * scale}px`, fontSize: `${10 * scale}px`, fontWeight: 'bold', color: 'red', fontFamily: 'Arial, sans-serif' }}>A</div>
-
           {/* Header fields */}
           {Object.entries(HEADER_FIELDS).map(([key, f]) => {
             if ('size' in f) {
