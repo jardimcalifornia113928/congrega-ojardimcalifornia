@@ -79,13 +79,26 @@ interface Props {
   userEmail?: string;
 }
 
-interface DebugContextType {
-  debug: boolean;
-  positions: Record<string, { x: number; y: number }>;
-  updatePosition: (id: string, x: number, y: number) => void;
+interface PosMeta {
+  x: number;
+  y: number;
+  w?: number;
+  fontSize?: number;
+  fontFamily?: string;
+  color?: string;
 }
 
-const DebugContext = React.createContext<DebugContextType>({ debug: false, positions: {}, updatePosition: () => {} });
+interface DebugContextType {
+  debug: boolean;
+  positions: Record<string, PosMeta>;
+  selectedId: string | null;
+  select: (id: string | null) => void;
+  updatePosition: (id: string, x: number, y: number) => void;
+  updateWidth: (id: string, w: number, x?: number, y?: number) => void;
+  updateStyle: (id: string, patch: Partial<PosMeta>) => void;
+}
+
+const DebugContext = React.createContext<DebugContextType>({ debug: false, positions: {}, selectedId: null, select: () => {}, updatePosition: () => {}, updateWidth: () => {}, updateStyle: () => {} });
 
 interface OverlayProps {
   id?: string;
@@ -97,37 +110,70 @@ interface OverlayProps {
   align?: 'left' | 'right' | 'center';
   fontSize?: number;
   fontWeight?: string;
+  color?: string;
 }
 
 function v(s: string | undefined | null): boolean {
   return !!s && s.trim() !== '';
 }
 
-function Overlay({ id, x, y, w, h = 14, value, align = 'left', fontSize = 11, fontWeight = 'bold' }: OverlayProps) {
-  const { debug, positions, updatePosition } = React.useContext(DebugContext);
+const DEFAULT_STYLE = { fontFamily: 'Arial, Helvetica, sans-serif', color: '#000000' };
+
+function Overlay({ id, x, y, w, h = 14, value, align = 'left', fontSize = 11, fontWeight = 'bold', color }: OverlayProps) {
+  const { debug, positions, selectedId, select, updatePosition, updateWidth, updateStyle } = React.useContext(DebugContext);
   const scale = 794 / 595;
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
   const startPos = useRef({ mx: 0, my: 0, sx: 0, sy: 0 });
 
-  const override = id && debug ? positions[id] : undefined;
+  const override = id ? positions[id] : undefined;
   const effX = override?.x ?? x;
   const effY = override?.y ?? y;
+  const effW = override?.w ?? w;
+  const effFontSize = override?.fontSize ?? fontSize;
+  const effFontFamily = override?.fontFamily ?? DEFAULT_STYLE.fontFamily;
+  const effColor = override?.color ?? color ?? DEFAULT_STYLE.color;
+  const isSelected = debug && id === selectedId;
 
   const baseLeft = effX * scale;
   const baseTop = (842 - effY - h + 22.5) * scale;
   const left = baseLeft + dragOffset.x;
   const top = baseTop + dragOffset.y;
-  const width = w * scale;
+  const width = effW * scale;
   const height = h * scale;
+
+  const handleResizeDown = (e: React.MouseEvent) => {
+    if (!debug || !id) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setDragging(true);
+    const startMX = e.clientX;
+    const startW = effW;
+    const startX = effX;
+    const startY = effY;
+    const handleMouseMove = (ev: MouseEvent) => {
+      const delta = (ev.clientX - startMX) / scale;
+      setDragOffset({ x: 0, y: 0 });
+      updateWidth(id!, Math.max(20, Math.round(startW + delta)), startX, startY);
+    };
+    const handleMouseUp = () => {
+      setDragging(false);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
 
   const cleanValue = (value && value !== 'null' && value !== 'undefined' && value !== 'N/A') ? value : '';
   const displayValue = cleanValue || '';
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (!debug || !id) return;
+    if (!debug) return;
     e.preventDefault();
     e.stopPropagation();
+    if (id) select(id);
+    if (!id) return;
     setDragging(true);
     startPos.current = { mx: e.clientX, my: e.clientY, sx: dragOffset.x, sy: dragOffset.y };
     const handleMouseMove = (ev: MouseEvent) => {
@@ -139,10 +185,13 @@ function Overlay({ id, x, y, w, h = 14, value, align = 'left', fontSize = 11, fo
       setDragging(false);
       const dx = ev.clientX - startPos.current.mx;
       const dy = ev.clientY - startPos.current.my;
-      const newX = Math.round(effX + dx / scale);
-      const newY = Math.round(effY - dy / scale);
+      const moved = Math.abs(dx) > 2 || Math.abs(dy) > 2;
       setDragOffset({ x: 0, y: 0 });
-      updatePosition(id!, newX, newY);
+      if (moved) {
+        const newX = Math.round(effX + dx / scale);
+        const newY = Math.round(effY - dy / scale);
+        updatePosition(id!, newX, newY);
+      }
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
@@ -153,6 +202,15 @@ function Overlay({ id, x, y, w, h = 14, value, align = 'left', fontSize = 11, fo
   return (
     <div
       data-overlay-id={id}
+      data-pdf-x={effX}
+      data-pdf-y={effY}
+      data-pdf-w={effW}
+      data-pdf-h={h}
+      data-pdf-align={align}
+      data-pdf-font-size={effFontSize}
+      data-pdf-font-weight={fontWeight}
+      data-pdf-font-family={effFontFamily}
+      data-pdf-color={effColor}
       onMouseDown={handleMouseDown}
       style={{
         position: 'absolute',
@@ -164,29 +222,49 @@ function Overlay({ id, x, y, w, h = 14, value, align = 'left', fontSize = 11, fo
         alignItems: 'center',
         justifyContent: align === 'left' ? 'flex-start' : align === 'right' ? 'flex-end' : 'center',
         textAlign: align,
-        fontSize: `${fontSize * scale}px`,
+        fontSize: `${effFontSize * scale}px`,
         fontWeight: fontWeight,
-        color: debug ? '#1D4ED8' : '#000000',
+        color: isSelected ? '#22D3EE' : (effColor || '#000000'),
         paddingLeft: align === 'left' ? '3px' : '0px',
         paddingRight: align === 'right' ? '3px' : '0px',
         lineHeight: 1.1,
         whiteSpace: 'nowrap',
-        overflow: 'visible',
-        fontFamily: 'Arial, Helvetica, sans-serif',
-        background: debug ? 'rgba(14,165,233,0.2)' : 'transparent',
-        border: debug ? '1px dashed rgba(14,165,233,0.5)' : 'none',
+        overflow: 'hidden',
+        fontFamily: effFontFamily,
+        background: isSelected ? 'rgba(34,211,238,0.15)' : (debug ? 'rgba(14,165,233,0.2)' : 'transparent'),
+        border: isSelected ? '1px solid #22D3EE' : (debug ? '1px dashed rgba(14,165,233,0.5)' : 'none'),
         borderRadius: debug ? '2px' : '0',
-        cursor: debug ? 'grab' : 'default',
+        cursor: debug ? (dragging ? 'grabbing' : 'grab') : 'default',
         pointerEvents: debug ? 'auto' : 'none',
-        zIndex: dragging ? 999 : 1,
+        zIndex: dragging ? 999 : (isSelected ? 5 : 1),
         boxShadow: debug ? '0 0 0 1px rgba(255,255,255,0.1)' : 'none',
       }}
     >
       {displayValue || (debug ? `${id || ''}` : '')}
       {debug && (
         <span style={{ position: 'absolute', bottom: '-17px', right: '0', fontSize: '8px', color: '#38bdf8', background: '#0F172A', padding: '0 4px', borderRadius: '2px', whiteSpace: 'nowrap', lineHeight: '16px', fontFamily: 'monospace', zIndex: 9999, pointerEvents: 'none' }}>
-          {id} x:{effX} y:{effY}
+          {id} x:{effX} y:{effY} w:{Math.round(effW)}
         </span>
+      )}
+      {debug && (
+        <div
+          onMouseDown={handleResizeDown}
+          style={{
+            position: 'absolute',
+            right: '-3px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: '6px',
+            height: '100%',
+            minHeight: '14px',
+            cursor: 'ew-resize',
+            background: '#38bdf8',
+            borderRadius: '3px',
+            zIndex: 99999,
+            pointerEvents: 'auto',
+          }}
+          title="Arrastar para ajustar a largura"
+        />
       )}
     </div>
   );
@@ -238,14 +316,36 @@ function PrintLayout({ midweek, weekend, userEmail }: { midweek: MidweekPreviewD
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isPdfLoaded, setIsPdfLoaded] = useState(false);
   const [debug, setDebug] = useState(false);
-  const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>({});
+  const [positions, setPositions] = useState<Record<string, PosMeta>>({});
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [gridVisible, setGridVisible] = useState(false);
   const [gridStep, setGridStep] = useState(20);
   const [fontSize, setFontSize] = useState(10);
   const updatePosition = React.useCallback((id: string, x: number, y: number) => {
-    setPositions(prev => ({ ...prev, [id]: { x, y } }));
+    setPositions(prev => ({ ...prev, [id]: { ...(prev[id] || {}), x, y } }));
   }, []);
-  const debugContext: DebugContextType = { debug, positions, updatePosition };
+  const updateWidth = React.useCallback((id: string, w: number, x?: number, y?: number) => {
+    setPositions(prev => {
+      const existing = prev[id] || {};
+      return { ...prev, [id]: { ...existing, x: existing.x ?? x ?? 0, y: existing.y ?? y ?? 0, w } };
+    });
+  }, []);
+  const updateStyle = React.useCallback((id: string, patch: Partial<PosMeta>) => {
+    setPositions(prev => ({ ...prev, [id]: { ...(prev[id] || {}), ...patch } }));
+  }, []);
+  const select = React.useCallback((id: string | null) => setSelectedId(id), []);
+  const debugContext: DebugContextType = { debug, positions, selectedId, select, updatePosition, updateWidth, updateStyle };
+
+  const STORAGE_KEY = 'meeting-print-positions';
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) setPositions(JSON.parse(raw));
+    } catch (e) { /* ignore */ }
+  }, []);
+  useEffect(() => {
+    try { if (Object.keys(positions).length > 0) localStorage.setItem(STORAGE_KEY, JSON.stringify(positions)); } catch (e) { /* ignore */ }
+  }, [positions]);
 
   useEffect(() => {
     let active = true;
@@ -305,15 +405,15 @@ function PrintLayout({ midweek, weekend, userEmail }: { midweek: MidweekPreviewD
 
   // Slots positions in PDF points (width 595, height 842)
   const ministeriosSlots = [
-    { y: 573, labelX: 11, labelW: 150, valX: 169, valW: 320 },
-    { y: 544, labelX: 11, labelW: 150, valX: 170, valW: 320 },
-    { y: 516, labelX: 10, labelW: 150, valX: 170, valW: 320 },
-    { y: 486, labelX: 11, labelW: 150, valX: 151, valW: 320 },
+    { y: 573, labelX: 7, labelW: 150, valX: 181, valW: 400 },
+    { y: 543, labelX: 7, labelW: 150, valX: 179, valW: 402 },
+    { y: 513, labelX: 8, labelW: 161, valX: 179, valW: 402 },
+    { y: 483, labelX: 7, labelW: 150, valX: 179, valW: 320 },
   ];
 
   return (
     <div style={{ position: 'relative', display: 'inline-block' }}>
-    <div style={{ position: 'relative', width: '794px', height: '1123px', backgroundColor: '#ffffff', overflow: 'hidden' }}>
+    <div data-print-layout style={{ position: 'relative', width: '794px', height: '1123px', backgroundColor: '#ffffff', overflow: 'hidden' }}>
       {userEmail === 'mariomarciofranco@gmail.com' && (
         <button onClick={() => setDebug(d => !d)}
           style={{
@@ -322,7 +422,7 @@ function PrintLayout({ midweek, weekend, userEmail }: { midweek: MidweekPreviewD
             borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 'bold',
             cursor: 'pointer', opacity: 0.7
           }}>
-          {debug ? 'Sair' : 'Ajustar'}
+          {debug ? 'Fechar' : 'Construtor'}
         </button>
       )}
       {!isPdfLoaded && (
@@ -363,35 +463,40 @@ function PrintLayout({ midweek, weekend, userEmail }: { midweek: MidweekPreviewD
         >
           {gridVisible && <Grid gridStep={gridStep} />}
           {/* Week range */}
-          <Overlay id="weekRange" x={445} y={798} w={142} value={midweek.weekRange.toUpperCase() + ' |'} align="right" fontSize={11} />
+          <Overlay id="weekRange" x={418} y={801} w={167} value={midweek.weekRange.toUpperCase() + ' |'} align="right" fontSize={11} />
 
           {/* Superintendente Visit */}
           {(midweek.showSuperVisit || weekend.showSuperVisit) && (
-            <Overlay id="visitaHeader" x={-47} y={799} w={495} value={"Semana Visita Superintendente " + ((midweek.superintendentName || "") + " - " + (midweek.superintendentWife || "")).trim()} fontSize={11} fontWeight="bold" align="center" />
+            <Overlay id="visitaHeader" x={10} y={801} w={393} value={"Semana Visita Superintendente " + ((midweek.superintendentName || "") + " - " + (midweek.superintendentWife || "")).trim()} fontSize={11} fontWeight="bold" align="left" />
           )}
 
           {/* Midweek header */}
-          <Overlay id="mwPresident" x={11} y={784} w={250} value={"Presidente - " + (midweek.president || "(sem designado)")} />
-          <Overlay id="mwOpeningPrayer" x={280} y={784} w={220} value={"Oração Inicial - " + (midweek.openingPrayer || "(sem designado)")} />
-          <Overlay id="mwClosingPrayer" x={280} y={760} w={200} value={"Oração Final - " + (midweek.closingPrayer || "(sem designado)")} />
+          <Overlay id="mwPresident" x={10} y={782} w={68} value="Presidente" fontSize={11} fontWeight="bold" color="#15515d" />
+          <Overlay id="mwPresidentNome" x={77} y={783} w={199} value={midweek.president || "(sem designado)"} fontSize={11} />
+          <Overlay id="mwOpeningPrayer" x={279} y={783} w={84} value="Oração Inicial" fontSize={11} fontWeight="bold" color="#15515d" />
+          <Overlay id="mwOpeningPrayerNome" x={361} y={782} w={208} value={midweek.openingPrayer || "(sem designado)"} fontSize={11} />
+          <Overlay id="mwClosingPrayer" x={278} y={761} w={82} value="Oração Final" fontSize={11} fontWeight="bold" color="#15515d" />
+          <Overlay id="mwClosingPrayerNome" x={360} y={761} w={210} value={midweek.closingPrayer || "(sem designado)"} fontSize={11} />
 
           {/* Treasures */}
-          <Overlay id="mwTalkTheme" x={11} y={699} w={380} value="01 - Tesouros" />
-          <Overlay id={`mwTalkSpeaker`} x={280} y={699} w={260} value={midweek.talkSpeaker} />
-          <Overlay id="mwGemsTheme" x={11} y={674} w={290} value="02 - Jóias" />
+          <Overlay id="mwTalkTheme" x={6} y={699} w={88} value="01 - Tesouros" color="#3a6869" />
+          <Overlay id={`mwTalkSpeaker`} x={281} y={699} w={260} value={midweek.talkSpeaker} />
+          <Overlay id="mwGemsTheme" x={7} y={674} w={65} value="02 - Jóias" color="#15515d" />
           <Overlay id="mwGemsSpeaker" x={281} y={673} w={230} value={midweek.gemsSpeaker} />
-          <Overlay id="mwBibleReadingRef" x={11} y={648} w={290} value="03 - Leitura da Biblia" />
-          <Overlay id="mwBibleReading" x={280} y={648} w={230} value={midweek.bibleReadingReader} />
+          <Overlay id="mwBibleReadingRef" x={7} y={647} w={136} value="03 - Leitura da Biblia" color="#4e6b6a" />
+          <Overlay id="mwBibleReading" x={281} y={648} w={230} value={midweek.bibleReadingReader} />
 
           {/* Faça Seu Melhor (Ministry) */}
           {ministeriosSlots.map((slot, i) => {
             if (i < activeParts.length) {
               const part = activeParts[i];
               const fullNames = [part.person, part.asst, part.h2].filter(Boolean).join(' / ');
+              const themeColors = ['#c8901b', '#d48d01', '#d19403', '#d19403'];
+              const namesW = [400, 402, 402, 320];
               return (
                 <React.Fragment key={i}>
-                  <Overlay id={`ministTheme${i}`} x={slot.labelX} y={slot.y} w={slot.labelW} value={part.theme} fontSize={11} />
-                  <Overlay id={`ministNames${i}`} x={slot.valX} y={slot.y} w={slot.valW} value={fullNames} fontSize={fontSize} align="left" />
+                  <Overlay id={`ministTheme${i}`} x={slot.labelX} y={slot.y} w={slot.labelW} value={part.theme} fontSize={11} color={themeColors[i]} />
+                  <Overlay id={`ministNames${i}`} x={slot.valX} y={slot.y} w={i < namesW.length ? namesW[i] : slot.valW} value={fullNames} fontSize={fontSize} align="left" />
                 </React.Fragment>
               );
             }
@@ -401,31 +506,39 @@ function PrintLayout({ midweek, weekend, userEmail }: { midweek: MidweekPreviewD
           {/* Nossa Vida Cristã section */}
           {activeLife.map((life, i) => {
             const lifeSlots = [
-              { y: 419, labelX: 15, labelW: 150, valX: 290, valW: 320 },
-              { y: 403, labelX: 15, labelW: 150, valX: 290, valW: 320 },
-              { y: 516, labelX: 9, labelW: 150, valX: 281, valW: 320 },
+              { y: 420, labelX: 8, labelW: 348, valX: 360, valW: 320 },
+              { y: 406, labelX: 8, labelW: 348, valX: 360, valW: 320 },
+              { y: 393, labelX: 8, labelW: 349, valX: 361, valW: 320 },
             ];
+            const lifeThemeColors = ['#7d3d3e', '#7d3d3e', '#7d3d3e'];
             const slot = lifeSlots[i];
             return (
               <React.Fragment key={i}>
-                <Overlay id={`lifeTheme${i}`} x={slot.labelX} y={slot.y} w={slot.labelW} value={life.theme} fontSize={11} />
+                <Overlay id={`lifeTheme${i}`} x={slot.labelX} y={slot.y} w={slot.labelW} value={life.theme} fontSize={11} color={lifeThemeColors[i]} />
                 <Overlay id={`lifeSpeaker${i}`} x={slot.valX} y={slot.y} w={slot.valW} value={life.speaker} fontSize={fontSize} align="left" />
               </React.Fragment>
             );
           })}
 
           {/* CBS section */}
-          <Overlay id="cbsLabel" x={15} y={383} w={110} value="Estudo Bíblico" fontSize={11} fontWeight="bold" />
-          <Overlay id="cbsDir" x={117} y={384} w={200} value={midweek.cbsConductor || "—"} fontSize={11} />
-          <Overlay id="cbsLeitor" x={320} y={384} w={230} value={midweek.cbsReader ? "Leitor: " + midweek.cbsReader : "—"} fontSize={11} />
+          <Overlay id="cbsLabel" x={7} y={378} w={91} value="Estudo Bíblico" fontSize={11} fontWeight="bold" color="#7d3d3e" />
+          <Overlay id="cbsDir" x={97} y={379} w={200} value={midweek.cbsConductor || "—"} fontSize={11} />
+          <Overlay id="cbsLeitor" x={298} y={379} w={57} value="Leitor:" fontSize={11} fontWeight="bold" color="#7d3d3e" />
+          <Overlay id="cbsLeitorNome" x={361} y={380} w={232} value={midweek.cbsReader || "—"} fontSize={11} />
 
           {/* Mechanical parts (Midweek) */}
-          <Overlay id="mwMecInd1" x={16} y={322} w={200} value={"Indicador 1 - " + (midweek.mechanicalIndicador1 || "")} />
-          <Overlay id="mwMecMic1" x={16} y={292} w={200} value={"Microfone 1 - " + (midweek.mechanicalMicrofone1 || "")} />
-          <Overlay id="mwMecAV" x={17} y={263} w={200} value={"Áudio e Vídeo - " + (midweek.mechanicalAudioVideo || "")} />
-          <Overlay id="mwMecInd2" x={331} y={321} w={160} value={"Indicador 2 - " + (midweek.mechanicalIndicador2 || "")} />
-          <Overlay id="mwMecMic2" x={331} y={293} w={160} value={"Microfone 2 - " + (midweek.mechanicalMicrofone2 || "")} />
-          <Overlay id="mwMecPalco" x={331} y={262} w={160} value={"Palco - " + (midweek.mechanicalPalco || "")} />
+          <Overlay id="mwMecInd1" x={11} y={323} w={71} value="Indicador 1" fontSize={11} fontWeight="bold" color="#274e13" />
+          <Overlay id="mwMecInd1Nome" x={81} y={323} w={195} value={midweek.mechanicalIndicador1 || ""} fontSize={11} />
+          <Overlay id="mwMecMic1" x={12} y={292} w={70} value="Microfone 1" fontSize={11} fontWeight="bold" color="#274e13" />
+          <Overlay id="mwMecMic1Nome" x={81} y={291} w={195} value={midweek.mechanicalMicrofone1 || ""} fontSize={11} />
+          <Overlay id="mwMecAV" x={11} y={263} w={81} value="Áudio e Vídeo" fontSize={11} fontWeight="bold" color="#274e13" />
+          <Overlay id="mwMecAVNome" x={91} y={263} w={195} value={midweek.mechanicalAudioVideo || ""} fontSize={11} />
+          <Overlay id="mwMecInd2" x={331} y={321} w={71} value="Indicador 2" fontSize={11} fontWeight="bold" color="#274e13" />
+          <Overlay id="mwMecInd2Nome" x={402} y={321} w={160} value={midweek.mechanicalIndicador2 || ""} fontSize={11} />
+          <Overlay id="mwMecMic2" x={331} y={293} w={70} value="Microfone 2" fontSize={11} fontWeight="bold" color="#274e13" />
+          <Overlay id="mwMecMic2Nome" x={400} y={293} w={163} value={midweek.mechanicalMicrofone2 || ""} fontSize={11} />
+          <Overlay id="mwMecPalco" x={331} y={262} w={41} value="Palco" fontSize={11} fontWeight="bold" color="#274e13" />
+          <Overlay id="mwMecPalcoNome" x={371} y={262} w={160} value={midweek.mechanicalPalco || ""} fontSize={11} />
 
           {/* FIM DE SEMANA */}
           {(() => {
@@ -437,46 +550,94 @@ function PrintLayout({ midweek, weekend, userEmail }: { midweek: MidweekPreviewD
               <>
                 {mwHas && (
                   <>
-                    <Overlay id="weSuperTema" x={10} y={365} w={290} value={"Tema - " + (midweek.superVisitTheme || "")} fontSize={11} />
-                    <Overlay id="weSuperNome" x={319} y={365} w={245} value={"Orador - " + (midweek.superVisitSuperintendent || "")} fontSize={11} />
+                    <Overlay id="weSuperTema" x={6} y={365} w={39} value="Tema:" fontSize={11} fontWeight="bold" color="#82484a" />
+                    <Overlay id="weSuperTemaVal" x={49} y={365} w={269} value={midweek.superVisitTheme || ""} fontSize={11} />
+                    <Overlay id="weSuperNome" x={319} y={365} w={50} value="Orador:" fontSize={11} fontWeight="bold" color="#7d3d3e" />
+                    <Overlay id="weSuperNomeVal" x={368} y={365} w={219} value={midweek.superVisitSuperintendent || ""} fontSize={11} />
                   </>
                 )}
                 {weHas && (
                   <>
-                    <Overlay id="weSuperTema2" x={9} y={123} w={290} value={"Tema - " + (weekend.superVisitTheme || "")} fontSize={11} />
-                    <Overlay id="weSuperNome2" x={310} y={123} w={245} value={"Orador - " + (weekend.superVisitSuperintendent || "")} fontSize={11} />
+                    <Overlay id="weSuperTema2" x={9} y={125} w={41} value="Tema:" fontSize={11} fontWeight="bold" color="#6e6e6e" />
+                    <Overlay id="weSuperTema2Val" x={50} y={125} w={321} value={weekend.superVisitTheme || ""} fontSize={11} />
+                    <Overlay id="weSuperNome2" x={369} y={125} w={50} value="Orador:" fontSize={11} fontWeight="bold" color="#6e6e6e" />
+                    <Overlay id="weSuperNome2Val" x={416} y={125} w={162} value={weekend.superVisitSuperintendent || ""} fontSize={11} />
                   </>
                 )}
               </>
             ) : null;
           })()}
-          <Overlay id="wePresident" x={16} y={199} w={250} value={"Presidente - " + (weekend.president || "(sem designado)")} />
-          <Overlay id="weOpeningPrayer" x={289} y={198} w={220} value={"Oração Inicial - " + (weekend.openingPrayer || "(sem designado)")} />
-          <Overlay id="weClosingPrayer" x={289} y={185} w={200} value={"Oração Final - " + (weekend.closingPrayer || "(sem designado)")} />
+          <Overlay id="wePresident" x={9} y={199} w={79} value="Presidente" fontSize={11} fontWeight="bold" color="#6e6e6e" />
+          <Overlay id="wePresidentNome" x={87} y={199} w={199} value={weekend.president || "(sem designado)"} fontSize={11} />
+          <Overlay id="weOpeningPrayer" x={286} y={199} w={83} value="Oração Inicial" fontSize={11} fontWeight="bold" color="#6e6e6e" />
+          <Overlay id="weOpeningPrayerNome" x={371} y={199} w={215} value={weekend.openingPrayer || "(sem designado)"} fontSize={11} />
+          <Overlay id="weClosingPrayer" x={286} y={185} w={75} value="Oração Final" fontSize={11} fontWeight="bold" color="#606060" />
+          <Overlay id="weClosingPrayerNome" x={370} y={183} w={215} value={weekend.closingPrayer || "(sem designado)"} fontSize={11} />
 
           {/* Talk theme & speaker */}
-          <Overlay id="weTalkTheme" x={15} y={166} w={380} value={weekend.talkTheme ? "Tema - " + weekend.talkTheme : ""} />
-          <Overlay id="weTalkSpeaker" x={356} y={166} w={160} value={(weekend.localSpeaker || weekend.visitingSpeaker) ? "Orador - " + (weekend.localSpeaker || weekend.visitingSpeaker) : ""} />
+          <Overlay id="weTalkTheme" x={9} y={163} w={45} value="Tema:" fontSize={11} fontWeight="bold" color="#6e6e6e" />
+          <Overlay id="weTalkThemeVal" x={52} y={163} w={309} value={weekend.talkTheme || ""} fontSize={11} />
+          <Overlay id="weTalkSpeaker" x={370} y={163} w={50} value="Orador:" fontSize={11} fontWeight="bold" color="#6e6e6e" />
+          <Overlay id="weTalkSpeakerNome" x={419} y={163} w={164} value={(weekend.localSpeaker || weekend.visitingSpeaker) || ""} fontSize={11} />
 
           {/* Watchtower Study */}
-          <Overlay id="weSentinelaLabel" x={14} y={143} w={145} value="Sentinela" fontSize={11} fontWeight="bold" />
-          <Overlay id="weWatchtowerCond" x={80} y={143} w={210} value={weekend.watchtowerConductor || "\u2014"} />
-          <Overlay id="weWatchtowerReader" x={310} y={142} w={180} value={weekend.watchtowerReader ? "Leitor: " + weekend.watchtowerReader : "\u2014"} />
+          <Overlay id="weSentinelaLabel" x={9} y={144} w={65} value="Sentinela" fontSize={11} fontWeight="bold" color="#6e6e6e" />
+          <Overlay id="weWatchtowerCondLabel" x={75} y={143} w={60} value="Condutor:" fontSize={11} fontWeight="bold" color="#6e6e6e" />
+          <Overlay id="weWatchtowerCond" x={136} y={144} w={140} value={weekend.watchtowerConductor || "\u2014"} fontSize={11} />
+          <Overlay id="weReaderLabel" x={285} y={143} w={45} value="Leitor:" fontSize={11} fontWeight="bold" color="#6e6e6e" />
+          <Overlay id="weWatchtowerReader" x={335} y={143} w={140} value={weekend.watchtowerReader || "\u2014"} fontSize={11} />
 
           {/* Mechanical parts (Weekend) */}
-          <Overlay id="weMecInd1" x={15} y={80} w={200} value={"Indicador 1 - " + (weekend.mechanicalIndicador1 || "")} />
-          <Overlay id="weMecMic1" x={16} y={59} w={200} value={"Microfone 1 - " + (weekend.mechanicalMicrofone1 || "")} />
-          <Overlay id="weMecAV" x={14} y={34} w={200} value={"Áudio e Vídeo - " + (weekend.mechanicalAudioVideo || "")} />
-          <Overlay id="weMecInd2" x={331} y={81} w={160} value={"Indicador 2 - " + (weekend.mechanicalIndicador2 || "")} />
-          <Overlay id="weMecMic2" x={331} y={58} w={160} value={"Microfone 2 - " + (weekend.mechanicalMicrofone2 || "")} />
-          <Overlay id="weMecPalco" x={331} y={33} w={160} value={"Palco - " + (weekend.mechanicalPalco || "")} />
+          <Overlay id="weMecInd1" x={9} y={84} w={69} value="Indicador 1" fontSize={11} fontWeight="bold" color="#274e13" />
+          <Overlay id="weMecInd1Nome" x={81} y={84} w={243} value={weekend.mechanicalIndicador1 || ""} fontSize={11} />
+          <Overlay id="weMecMic1" x={10} y={59} w={70} value="Microfone 1" fontSize={11} fontWeight="bold" color="#274e13" />
+          <Overlay id="weMecMic1Nome" x={79} y={59} w={244} value={weekend.mechanicalMicrofone1 || ""} fontSize={11} />
+          <Overlay id="weMecAV" x={11} y={34} w={85} value="Áudio e Vídeo" fontSize={11} fontWeight="bold" color="#274e13" />
+          <Overlay id="weMecAVNome" x={96} y={33} w={226} value={weekend.mechanicalAudioVideo || ""} fontSize={11} />
+          <Overlay id="weMecInd2" x={331} y={84} w={69} value="Indicador 2" fontSize={11} fontWeight="bold" color="#274e13" />
+          <Overlay id="weMecInd2Nome" x={401} y={81} w={188} value={weekend.mechanicalIndicador2 || ""} fontSize={11} />
+          <Overlay id="weMecMic2" x={331} y={58} w={71} value="Microfone 2" fontSize={11} fontWeight="bold" color="#284f14" />
+          <Overlay id="weMecMic2Nome" x={400} y={58} w={188} value={weekend.mechanicalMicrofone2 || ""} fontSize={11} />
+          <Overlay id="weMecPalco" x={331} y={33} w={42} value="Palco" fontSize={11} fontWeight="bold" color="#274e13" />
+          <Overlay id="weMecPalcoNome" x={372} y={33} w={214} value={weekend.mechanicalPalco || ""} fontSize={11} />
         </div>
         {debug && (
           <div style={{ position: 'fixed', top: '72px', right: '16px', width: '280px', background: '#0F172A', border: '1px solid #1E293B', borderRadius: '8px', padding: '12px', fontSize: '12px', color: '#E2E8F0', maxHeight: 'calc(100vh - 96px)', overflowY: 'auto', fontFamily: 'monospace', zIndex: 99999 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', borderBottom: '1px solid #1E293B', paddingBottom: '8px' }}>
-              <span style={{ fontWeight: 'bold', color: '#38BDFY' }}>Coordenadas</span>
+              <span style={{ fontWeight: 'bold', color: '#38BDFY' }}>Construtor</span>
               <div style={{ display: 'flex', gap: '6px' }}>
-                <button onClick={() => { const text = Object.entries(positions).map(([k,v]) => `${k}: x={${v.x}} y={${v.y}}`).join('\n'); navigator.clipboard.writeText(text).then(() => toast.success('Posições copiadas!')); }}
+                <button
+                  onClick={() => {
+                    const salvo = Object.entries(positions).reduce<Record<string, PosMeta>>((acc, [k, v]) => {
+                      const item: PosMeta = { x: v.x, y: v.y };
+                      if (v.w !== undefined) item.w = v.w;
+                      if (v.fontSize !== undefined) item.fontSize = v.fontSize;
+                      if (v.fontFamily !== undefined) item.fontFamily = v.fontFamily;
+                      if (v.color !== undefined) item.color = v.color;
+                      acc[k] = item;
+                      return acc;
+                    }, {});
+                    const blob = new Blob([JSON.stringify(salvo, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'posicoes-impressao.json';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    toast.success('Configuração salva! Envie o arquivo para aplicar.');
+                  }}
+                  style={{ background: '#16A34A', border: '1px solid #166534', borderRadius: '4px', color: '#fff', padding: '2px 8px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>
+                  Salvar
+                </button>
+                <button
+                  onClick={() => {
+                    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(positions)); } catch (e) { /* ignore */ }
+                    toast.success('Aplicado! O PDF já usa estas configurações.');
+                  }}
+                  style={{ background: '#7C3AED', border: '1px solid #5B21B6', borderRadius: '4px', color: '#fff', padding: '2px 8px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}>
+                  Aplicar
+                </button>
+                <button onClick={() => { const text = Object.entries(positions).map(([k,v]) => `${k}: x={${v.x}} y={${v.y}} w={${v.w}}`).join('\n'); navigator.clipboard.writeText(text).then(() => toast.success('Posições copiadas!')); }}
                   style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: '4px', color: '#38BDFY', padding: '2px 8px', fontSize: '11px', cursor: 'pointer' }}>
                   Copiar
                 </button>
@@ -514,22 +675,78 @@ function PrintLayout({ midweek, weekend, userEmail }: { midweek: MidweekPreviewD
               </div>
             </div>
 
-            {/* Controle de tamanho de fonte */}
-            <div style={{ marginTop: '8px', paddingTop: '6px', borderTop: '1px solid #1E293B' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span style={{ color: '#94A3B8', fontSize: '11px' }}>Fonte</span>
-                <button onClick={() => setFontSize(s => Math.min(14, s + 1))}
-                  style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: '4px', color: '#38BDFY', padding: '2px 6px', fontSize: '10px', cursor: 'pointer' }}>
-                  A+
-                </button>
-                <span style={{ minWidth: '24px', textAlign: 'center', color: '#E2E8F0' }}>{fontSize}px</span>
-                <button onClick={() => setFontSize(s => Math.max(8, s - 1))}
-                  style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: '4px', color: '#F87171', padding: '2px 6px', fontSize: '10px', cursor: 'pointer' }}>
-                  A-
-                </button>
+            {/* Propriedades da caixa selecionada */}
+            {selectedId ? (
+              <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #1E293B' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 'bold', color: '#38BDFY' }}>Propriedades</span>
+                  <span style={{ color: '#94A3B8', fontSize: '11px' }}>{selectedId}</span>
+                </div>
+
+                {/* Tamanho da fonte */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ color: '#94A3B8', fontSize: '11px' }}>Tamanho da fonte</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <button onClick={() => updateStyle(selectedId, { fontSize: Math.max(6, (positions[selectedId]?.fontSize ?? 11) - 1) })}
+                      style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: '4px', color: '#F87171', padding: '2px 6px', fontSize: '11px', cursor: 'pointer' }}>A-</button>
+                    <span style={{ minWidth: '26px', textAlign: 'center', color: '#E2E8F0', fontSize: '11px' }}>{positions[selectedId]?.fontSize ?? 11}</span>
+                    <button onClick={() => updateStyle(selectedId, { fontSize: Math.min(24, (positions[selectedId]?.fontSize ?? 11) + 1) })}
+                      style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: '4px', color: '#38BDFY', padding: '2px 6px', fontSize: '11px', cursor: 'pointer' }}>A+</button>
+                  </div>
+                </div>
+
+                {/* Família da fonte */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ color: '#94A3B8', fontSize: '11px' }}>Fonte</span>
+                  <select
+                    value={positions[selectedId]?.fontFamily ?? DEFAULT_STYLE.fontFamily}
+                    onChange={e => updateStyle(selectedId, { fontFamily: e.target.value })}
+                    style={{ background: '#1E293B', color: '#E2E8F0', border: '1px solid #334155', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', maxWidth: '150px' }}
+                  >
+                    <option value="Arial, Helvetica, sans-serif">Arial</option>
+                    <option value="Georgia, serif">Georgia</option>
+                    <option value="'Courier New', monospace">Courier New</option>
+                    <option value="'Times New Roman', serif">Times New Roman</option>
+                    <option value="Verdana, Geneva, sans-serif">Verdana</option>
+                    <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+                  </select>
+                </div>
+
+                {/* Cor da fonte */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#94A3B8', fontSize: '11px' }}>Cor da fonte</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <input
+                      type="color"
+                      value={positions[selectedId]?.color ?? DEFAULT_STYLE.color}
+                      onChange={e => updateStyle(selectedId, { color: e.target.value })}
+                      style={{ width: '30px', height: '26px', border: '1px solid #334155', borderRadius: '4px', background: 'transparent', cursor: 'pointer', padding: 0 }}
+                    />
+                    <button
+                      onClick={async () => {
+                        try {
+                          const EyeDropper = (window as unknown as { EyeDropper?: new () => { open(): Promise<{ sRGBHex: string }> } }).EyeDropper;
+                          if (!EyeDropper) {
+                            toast.error('Conta-gotas não suportado neste navegador (use Chrome).');
+                            return;
+                          }
+                          const ed = new EyeDropper();
+                          const result = await ed.open();
+                          if (result?.sRGBHex) updateStyle(selectedId, { color: result.sRGBHex });
+                        } catch (e) { /* usuário cancelou */ }
+                      }}
+                      title="Conta-gotas - pegar cor da tela"
+                      style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: '4px', color: '#38BDFY', padding: '2px 8px', fontSize: '11px', cursor: 'pointer' }}>
+                      Conta-gotas
+                    </button>
+                  </div>
+                </div>
               </div>
-              <div style={{ fontSize: '10px', color: '#64748B' }}>Tamanho para nomes (8-14px)</div>
-            </div>
+            ) : (
+              <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #1E293B', color: '#94A3B8', fontSize: '11px' }}>
+                Selecione uma caixa no layout para editar fonte, tamanho e cor.
+              </div>
+            )}
 
             {Object.keys(positions).length === 0 && (
               <div style={{ color: '#64748B', fontStyle: 'italic' }}>Nenhum item ajustado ainda.<br />Arraste os itens azuis no layout.</div>
@@ -560,98 +777,77 @@ export function MeetingPreviewModal({ midweek, weekend, onClose, userEmail }: Pr
     try {
       const jsPDF = (await import('jspdf')).default;
 
-      const bgCanvas = layoutRef.current.querySelector('canvas') as HTMLCanvasElement | null;
-      if (!bgCanvas || !bgCanvas.width) {
-        throw new Error('Modelo ainda não carregado.');
-      }
+      const layoutEl = layoutRef.current.querySelector('[data-print-layout]') as HTMLElement;
+      if (!layoutEl) throw new Error('Layout não encontrado.');
 
-      const overlayEls = layoutRef.current.querySelectorAll('.overlay-container > div');
-      const cssW = layoutRef.current.offsetWidth;
-      const cssH = layoutRef.current.offsetHeight;
-      const cw = bgCanvas.width;
-      const ch = bgCanvas.height;
-      const sx = cw / cssW;
-      const sy = ch / cssH;
+      const W = 794;
+      const H = 1123;
+      const S = 2;
+      const cw = W * S;
+      const ch = H * S;
 
       const finalCanvas = document.createElement('canvas');
       finalCanvas.width = cw;
       finalCanvas.height = ch;
       const ctx = finalCanvas.getContext('2d')!;
-      ctx.drawImage(bgCanvas, 0, 0);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, cw, ch);
 
-      overlayEls.forEach((el) => {
-        const htmlEl = el as HTMLElement;
-        const text = htmlEl.textContent || '';
-        const bg = htmlEl.style.backgroundColor;
-
-        const left = parseFloat(htmlEl.style.left) || 0;
-        const top = parseFloat(htmlEl.style.top) || 0;
-        const width = parseFloat(htmlEl.style.width) || 0;
-        const height = parseFloat(htmlEl.style.height) || 14;
-
-        const cx = left * sx;
-        const cy = top * sy;
-        const cwE = width * sx;
-        const chE = height * sy;
-
-        if (!text.trim() && bg) {
-          ctx.fillStyle = bg;
-          ctx.fillRect(cx, cy, cwE, chE);
-          return;
-        }
-        if (!text.trim()) return;
-
-        const align = htmlEl.style.textAlign || 'left';
-        const fontSize = parseFloat(htmlEl.style.fontSize) || 11;
-        const fontWeight = htmlEl.style.fontWeight || 'bold';
-
-        const pdfScale = cw / 595;
-        ctx.font = `${fontWeight === 'bold' ? 'bold ' : ''}${fontSize * pdfScale}px Arial, Helvetica, sans-serif`;
-        ctx.fillStyle = '#000000';
-        ctx.textBaseline = 'middle';
-
-        const padding = 3 * sx;
-        let tx = cx + padding;
-        let ta: CanvasTextAlign = 'left';
-        if (align === 'right') {
-          tx = cx + cwE - padding;
-          ta = 'right';
-        } else if (align === 'center') {
-          tx = cx + cwE / 2;
-          ta = 'center';
-        }
-        ctx.textAlign = ta;
-        ctx.fillText(text, tx, cy + chE / 2);
-      });
-
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const pW = pdf.internal.pageSize.getWidth();
-      const pH = pdf.internal.pageSize.getHeight();
-      const imgH = (finalCanvas.height * pW) / finalCanvas.width;
-
-      if (imgH <= pH) {
-        pdf.addImage(finalCanvas, 'JPEG', 0, 0, pW, imgH, undefined, 'FAST');
-      } else {
-        const ratio = finalCanvas.width / pW;
-        const pageImgH = pH * ratio;
-        let srcY = 0;
-        while (srcY < finalCanvas.height) {
-          const srcH = Math.min(pageImgH, finalCanvas.height - srcY);
-          const sliceCanvas = document.createElement('canvas');
-          sliceCanvas.width = finalCanvas.width;
-          sliceCanvas.height = srcH;
-          sliceCanvas.getContext('2d')!.drawImage(finalCanvas, 0, srcY, finalCanvas.width, srcH, 0, 0, finalCanvas.width, srcH);
-          if (srcY > 0) pdf.addPage();
-          pdf.addImage(sliceCanvas, 'JPEG', 0, 0, pW, (srcH * pW) / finalCanvas.width, undefined, 'FAST');
-          srcY += srcH;
+      const bgCanvas = layoutEl.querySelector('canvas') as HTMLCanvasElement | null;
+      if (bgCanvas && bgCanvas.width > 0 && bgCanvas.height > 0) {
+        try {
+          ctx.drawImage(bgCanvas, 0, 0, cw, ch);
+        } catch (e) {
+          console.warn('Fundo não pôde ser copiado, usando branco:', e);
         }
       }
 
+      const overlayEl = layoutEl.querySelector('.overlay-container') as HTMLElement | null;
+      if (overlayEl) {
+        const spans = Array.from(overlayEl.querySelectorAll('[data-overlay-id]')) as HTMLElement[];
+        for (const span of spans) {
+          const cs = getComputedStyle(span);
+          const leftPx = parseFloat(cs.left) || 0;
+          const topPx = parseFloat(cs.top) || 0;
+          const wPx = parseFloat(cs.width) || 0;
+          const fontPx = parseFloat(cs.fontSize) || 11;
+          const weight = cs.fontWeight === 'bold' || parseInt(cs.fontWeight, 10) >= 600 ? 'bold' : 'normal';
+          const color = cs.color;
+          const fontFamily = cs.fontFamily || 'Arial, Helvetica, sans-serif';
+          const align = (cs.textAlign || 'left') as CanvasTextAlign;
+
+          ctx.save();
+          ctx.font = `${weight} ${Math.max(1, fontPx * S)}px ${fontFamily}`;
+          ctx.fillStyle = cs.color || '#000';
+          if (color) ctx.fillStyle = color;
+          ctx.textBaseline = 'middle';
+          ctx.textAlign = align;
+
+          const text = (span.firstChild?.textContent ?? '') || '';
+          if (!text) continue;
+          const lx =
+            align === 'right'
+              ? (leftPx + wPx) * S
+              : align === 'center'
+              ? (leftPx + wPx / 2) * S
+              : leftPx * S;
+          const ly = topPx * S + (fontPx * S) / 2;
+
+          if (weight === 'bold' && color) ctx.fillStyle = color;
+          ctx.fillText(text, lx, ly);
+          ctx.restore();
+        }
+      }
+
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
+      pdf.addImage(finalCanvas, 'JPEG', 0, 0, pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight(), undefined, 'FAST');
+
       const fileName = `programacao-${midweek.weekRange.replace(/[\s/]/g, '-').toLowerCase()}.pdf`;
       pdf.save(fileName);
+      toast.success('PDF baixado com sucesso!', { id: toastId });
     } catch (err) {
       console.error(err);
-      toast.error('Erro ao gerar PDF', { id: toastId });
+      toast.error(`Erro ao gerar PDF: ${err instanceof Error ? err.message : String(err)}`, { id: toastId });
     } finally {
       setIsGenerating(false);
     }

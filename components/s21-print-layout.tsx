@@ -177,6 +177,7 @@ export function S21PrintLayout({ publisher, s21Data, serviceYear }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string>('');
   const pdfPageW = 595.2;
   const pdfPageH = 841.9;
 
@@ -186,7 +187,7 @@ export function S21PrintLayout({ publisher, s21Data, serviceYear }: Props) {
       try {
         const pdfjsLib = await import('pdfjs-dist');
         pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@6.0.227/build/pdf.worker.min.mjs`;
-        const loadingTask = pdfjsLib.getDocument({ url: '/s-21.pdf' });
+        const loadingTask = pdfjsLib.getDocument({ url: '/S-21.pdf' });
         const pdf = await loadingTask.promise;
         if (!active) return;
         const page = await pdf.getPage(1);
@@ -200,8 +201,10 @@ export function S21PrintLayout({ publisher, s21Data, serviceYear }: Props) {
         canvas.height = viewport.height;
         await page.render({ canvas, canvasContext: context, viewport }).promise;
         if (active) setIsLoaded(true);
+        else setLoadError('');
       } catch (error) {
         console.error("Error loading S-21 PDF:", error);
+        if (active) setLoadError(error instanceof Error ? error.message : String(error));
       }
     }
     loadPdf();
@@ -219,9 +222,15 @@ export function S21PrintLayout({ publisher, s21Data, serviceYear }: Props) {
 
   return (
     <div ref={containerRef} data-s21-page style={{ position: 'relative', width: `${cssW}px`, height: `${cssH}px`, backgroundColor: '#ffffff', overflow: 'hidden' }}>
-      {!isLoaded && (
+      {!isLoaded && !loadError && (
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#0f172a' }}>
           <Loader2 className="w-8 h-8 animate-spin text-[#0EA5E9]" />
+        </div>
+      )}
+      {!isLoaded && loadError && (
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#0f172a', color: '#FCA5A5', textAlign: 'center', padding: '20px', gap: '10px' }}>
+          <span style={{ fontSize: '13px', fontWeight: 'bold' }}>Não foi possível carregar o formulário S-21</span>
+          <span style={{ fontSize: '11px', color: '#F87171', wordBreak: 'break-word' }}>{loadError}</span>
         </div>
       )}
       <canvas ref={canvasRef} style={{ position: 'absolute', top: 0, left: 0, width: `${cssW}px`, height: `${cssH}px`, zIndex: 0, pointerEvents: 'none' }} />

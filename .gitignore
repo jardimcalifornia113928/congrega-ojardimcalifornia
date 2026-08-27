@@ -51,3 +51,12 @@ restart-dev.ps1
 
 # cópia local das imagens (a versão servida é public/territorio)
 /territorio/
+
+# logs de desenvolvimento local
+dev*.log
+dev_new.log
+dev-*.log
+echo
+
+# backups de layout local
+public/*.pdf.pdf
