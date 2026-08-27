@@ -605,7 +605,8 @@ export function MeetingPreviewModal({ midweek, weekend, onClose, userEmail }: Pr
         const fontSize = parseFloat(htmlEl.style.fontSize) || 11;
         const fontWeight = htmlEl.style.fontWeight || 'bold';
 
-        ctx.font = `${fontWeight === 'bold' ? 'bold ' : ''}${fontSize * sx}px Arial, Helvetica, sans-serif`;
+        const pdfScale = cw / 595;
+        ctx.font = `${fontWeight === 'bold' ? 'bold ' : ''}${fontSize * pdfScale}px Arial, Helvetica, sans-serif`;
         ctx.fillStyle = '#000000';
         ctx.textBaseline = 'middle';
 
