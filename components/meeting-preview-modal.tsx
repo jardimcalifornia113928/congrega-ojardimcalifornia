@@ -582,8 +582,7 @@ function PrintLayout({ midweek, weekend, userEmail }: { midweek: MidweekPreviewD
 
           {/* Watchtower Study */}
           <Overlay id="weSentinelaLabel" x={9} y={144} w={65} value="Sentinela" fontSize={11} fontWeight="bold" color="#6e6e6e" />
-          <Overlay id="weWatchtowerCondLabel" x={75} y={143} w={60} value="Condutor:" fontSize={11} fontWeight="bold" color="#6e6e6e" />
-          <Overlay id="weWatchtowerCond" x={136} y={144} w={140} value={weekend.watchtowerConductor || "\u2014"} fontSize={11} />
+          <Overlay id="weWatchtowerCond" x={75} y={144} w={210} value={weekend.watchtowerConductor || "\u2014"} fontSize={11} />
           <Overlay id="weReaderLabel" x={285} y={143} w={45} value="Leitor:" fontSize={11} fontWeight="bold" color="#6e6e6e" />
           <Overlay id="weWatchtowerReader" x={335} y={143} w={140} value={weekend.watchtowerReader || "\u2014"} fontSize={11} />
 
