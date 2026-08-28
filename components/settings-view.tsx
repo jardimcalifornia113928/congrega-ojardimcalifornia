@@ -33,10 +33,14 @@ export function SettingsView() {
     weekendTime: "",
     circuitSuperintendent: "",
     circuitSuperintendentWife: "",
-    circuitSuperintendentPhone: ""
+    circuitSuperintendentPhone: "",
+    superintendentDesignations: [] as string[],
+    visitWeek: "",
+    visitStartDate: "",
+    visitEndDate: "",
   });
 
-  const updateField = (field: string, value: string | number) => {
+  const updateField = (field: string, value: string | number | string[]) => {
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
@@ -167,7 +171,7 @@ export function SettingsView() {
     <div className="space-y-12">
       <div className="flex justify-between items-end">
         <div>
-          <h1 className="text-2xl font-black text-white tracking-tight mb-1">Configurações</h1>
+          <h1 className="text-2xl font-black text-white tracking-tight mb-1">Parâmetros</h1>
           <p className="text-[11px] text-[#94A3B8] font-bold">Gerencie as preferências globais do sistema.</p>
         </div>
         <Button onClick={handleSaveAll} className="h-9 bg-[#0EA5E9] hover:bg-blue-700 text-white font-bold rounded-lg shadow-lg shadow-blue-600/20 px-5 gap-1.5 text-[10px]">
@@ -340,6 +344,63 @@ export function SettingsView() {
                 placeholder="(00) 00000-0000"
                 className="h-9 bg-[#1E293B]/50 border-[#1E293B]/50 rounded-lg text-xs"
               />
+            </div>
+            <div className="space-y-2 pt-2 border-t border-[#1E293B]/50">
+              <Label className="text-[9px] font-black text-[#64748B] tracking-widest uppercase flex items-center gap-1">
+                <Calendar className="h-2.5 w-2.5" /> Visita do Superintendente
+              </Label>
+              <div className="space-y-1.5">
+                <Label className="text-[9px] font-black text-[#94A3B8] uppercase">Semana da Visita</Label>
+                <Input
+                  value={form.visitWeek}
+                  onChange={(e) => updateField("visitWeek", e.target.value)}
+                  placeholder="Ex.: 12/05 – 18/05"
+                  className="h-9 bg-[#1E293B]/50 border-[#1E293B]/50 rounded-lg text-xs"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-[9px] font-black text-[#94A3B8] uppercase">Data Inicial</Label>
+                  <Input
+                    type="date"
+                    value={form.visitStartDate}
+                    onChange={(e) => updateField("visitStartDate", e.target.value)}
+                    className="h-9 bg-[#1E293B]/50 border-[#1E293B]/50 rounded-lg text-xs [color-scheme:dark]"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[9px] font-black text-[#94A3B8] uppercase">Data Final</Label>
+                  <Input
+                    type="date"
+                    value={form.visitEndDate}
+                    onChange={(e) => updateField("visitEndDate", e.target.value)}
+                    className="h-9 bg-[#1E293B]/50 border-[#1E293B]/50 rounded-lg text-xs [color-scheme:dark]"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="pt-1 space-y-2">
+              <Label className="text-[9px] font-black text-[#64748B] tracking-widest uppercase">Designações</Label>
+              <div className="grid grid-cols-1 gap-1.5">
+                {(["Orador Local", "Oração Inicial", "Oração Final", "Dirigente de campo"] as const).map((item) => {
+                  const checked = form.superintendentDesignations.includes(item);
+                  return (
+                    <label key={item} className="flex items-center gap-2.5 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => {
+                          const current = form.superintendentDesignations || [];
+                          const next = e.target.checked ? [...current, item] : current.filter((d: string) => d !== item);
+                          updateField("superintendentDesignations", next);
+                        }}
+                        className="h-4 w-4 accent-[#0EA5E9]"
+                      />
+                      <span className="text-[11px] font-bold text-white">{item}</span>
+                    </label>
+                  );
+                })}
+              </div>
             </div>
           </CardContent>
         </Card>

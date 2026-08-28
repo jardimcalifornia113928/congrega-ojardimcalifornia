@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/components/auth-provider';
 import { handleFirestoreError, OperationType } from '@/lib/firebase-utils';
+import { mergeSuperintendent } from '@/lib/superintendent';
 import {
   collection,
   doc,
@@ -204,6 +205,8 @@ export function WeekendView() {
   });
 
   const [publishers, setPublishers] = useState<any[]>([]);
+  const publishersBaseRef = useRef<any[]>([]);
+  const [superintendentSettings, setSuperintendentSettings] = useState<{ superintendentName?: string; superintendentDesignations?: string[] } | undefined>(undefined);
   const [meetingData, setMeetingData] = useState<WeekendMeetingData>(defaultMeetingData);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -262,14 +265,18 @@ const [superintendentWife, setSuperintendentWife] = useState("");
       collection(db, 'publishers')
     );
     const unsubscribe = onSnapshot(q, (snapshot: any) => {
-      const pubs = snapshot.docs.map(doc => ({
+      publishersBaseRef.current = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })).sort((a: any, b: any) => (a.firstName || "").localeCompare(b.firstName || ""));
-      setPublishers(pubs);
+      setPublishers(mergeSuperintendent(publishersBaseRef.current, superintendentSettings));
     });
     return () => unsubscribe();
   }, [user]);
+
+  useEffect(() => {
+    setPublishers(mergeSuperintendent(publishersBaseRef.current, superintendentSettings));
+  }, [superintendentSettings]);
 
   // Load saved weeks list
   useEffect(() => {
@@ -397,6 +404,10 @@ const [superintendentWife, setSuperintendentWife] = useState("");
         const data = snap.data();
         setSuperintendentName(data.circuitSuperintendent || "");
         setSuperintendentWife(data.circuitSuperintendentWife || "");
+        setSuperintendentSettings({
+          superintendentName: data.circuitSuperintendent || "",
+          superintendentDesignations: data.superintendentDesignations || [],
+        });
       }
     });
     return () => unsubscribe();

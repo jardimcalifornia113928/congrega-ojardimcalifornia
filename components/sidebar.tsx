@@ -52,8 +52,8 @@ export function Sidebar({ activeTab, onNavigate, isMobileOpen, onMobileClose }: 
       { id: 'prints', label: 'Impressões', icon: Printer },
       { id: 'cleaning', label: 'Limpeza', icon: Calendar },
     ]},
-    { title: 'CONFIGURAÇÃO', items: [
-      { id: 'settings', label: 'Congregação', icon: Settings },
+    { title: 'PARÂMETROS', items: [
+      { id: 'settings', label: 'Parâmetros', icon: Settings },
       { id: 'users', label: 'Usuários', icon: Shield },
     ]},
   ];

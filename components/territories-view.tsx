@@ -35,6 +35,7 @@ import {
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/components/auth-provider';
 import { handleFirestoreError, OperationType } from '@/lib/firebase-utils';
+import { mergeSuperintendent } from '@/lib/superintendent';
 import type { Territory } from '@/lib/types';
 import {
   collection,
@@ -208,6 +209,8 @@ async function generateTerritoryPdf(t: Territory): Promise<Uint8Array> {
 export function TerritoriesView() {
   const [territories, setTerritories] = React.useState<Territory[]>([]);
   const [publishers, setPublishers] = React.useState<Publisher[]>([]);
+  const publishersBaseRef = React.useRef<any[]>([]);
+  const [superintendentSettings, setSuperintendentSettings] = React.useState<{ superintendentName?: string; superintendentDesignations?: string[] } | undefined>(undefined);
   const [isLoading, setIsLoading] = React.useState(true);
   const [sendingId, setSendingId] = React.useState<string | null>(null);
   const [preview, setPreview] = React.useState<{ pdfBytes: Uint8Array; fileName: string; territory: Territory } | null>(null);
@@ -268,15 +271,15 @@ export function TerritoriesView() {
     });
 
     const unsubPublishers = onSnapshot(collection(db, 'publishers'), (snapshot: any) => {
-      const data = snapshot.docs.map((doc: any) => ({
+      publishersBaseRef.current = snapshot.docs.map((doc: any) => ({
         id: doc.id,
         firstName: doc.data().firstName || '',
         middleName: doc.data().middleName || '',
         lastName: doc.data().lastName || '',
         phone: doc.data().phone || '',
         designations: doc.data().designations || []
-      })) as Publisher[];
-      setPublishers(data);
+      })) as any[];
+      setPublishers(mergeSuperintendent(publishersBaseRef.current, superintendentSettings));
     }, (error: unknown) => {
       console.error("Publishers fetch error:", error);
     });
@@ -286,6 +289,25 @@ export function TerritoriesView() {
       unsubPublishers();
     };
   }, [user]);
+
+  React.useEffect(() => {
+    if (!user) return;
+    const docRef = doc(db, 'settings', `congregation_${user.uid}`);
+    const unsub = onSnapshot(docRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setSuperintendentSettings({
+          superintendentName: data.circuitSuperintendent || "",
+          superintendentDesignations: data.superintendentDesignations || [],
+        });
+      }
+    });
+    return () => unsub();
+  }, [user]);
+
+  React.useEffect(() => {
+    setPublishers(mergeSuperintendent(publishersBaseRef.current, superintendentSettings));
+  }, [superintendentSettings]);
 
   const today = () => {
     const d = new Date();
