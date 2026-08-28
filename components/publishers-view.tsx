@@ -563,6 +563,7 @@ export function PublishersView() {
                           <SelectItem value="inativo">Inativo</SelectItem>
                           <SelectItem value="removido">Removido</SelectItem>
                           <SelectItem value="mudou">Mudou</SelectItem>
+                          <SelectItem value="estudante">Estudante</SelectItem>
                         </SelectContent>
                       </Select>
                       {publisherData.status === 'inativo' && (

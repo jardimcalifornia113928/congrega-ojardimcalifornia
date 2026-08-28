@@ -11,7 +11,7 @@ import { phoneMask } from '@/lib/utils';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/components/auth-provider';
 import { handleFirestoreError, OperationType } from '@/lib/firebase-utils';
-import { collection, onSnapshot, query, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, query, updateDoc, doc, serverTimestamp, where } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { CongregationPreviewModal } from '@/components/congregation-preview-modal';
 import type { CongregationPrintRow } from '@/components/congregation-print-layout';
@@ -28,6 +28,7 @@ const STATUS_LABELS: Record<string, string> = {
   inativo: 'Inativo',
   removido: 'Removido',
   mudou: 'Mudou',
+  estudante: 'Estudante',
 };
 
 const FILTERS = [
@@ -56,7 +57,7 @@ export function CongregationView() {
       return;
     }
 
-    const q = query(collection(db, 'publishers'));
+    const q = query(collection(db, 'publishers'), where('status', '==', 'ativo'));
     const unsubscribe = onSnapshot(q, (snapshot: any) => {
       const pubs = snapshot.docs.map(doc => ({
         id: doc.id,

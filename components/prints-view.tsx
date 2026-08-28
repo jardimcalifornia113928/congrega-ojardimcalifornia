@@ -285,9 +285,10 @@ export function PrintsView() {
     if (!user) return;
     setIsS21Loading(true);
     try {
-      const q = query(collection(db, 'publishers'), where('status', '==', 'ativo'));
+      const q = query(collection(db, 'publishers'), where('status', 'in', ['ativo', 'inativo']));
       const snap = await getDocs(q);
-      const publishers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const publishers = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a: any, b: any) => `${a.firstName || ''} ${a.lastName || ''}`.localeCompare(`${b.firstName || ''} ${b.lastName || ''}`));
       const items = await Promise.all(publishers.map(fetchPublisherS21));
       setS21BatchItems(items);
       setS21BatchTitle('Cartões S-21 — Todos os Publicadores');
@@ -322,9 +323,10 @@ export function PrintsView() {
     if (!user || !selectedS21Group) return;
     setIsS21Loading(true);
     try {
-      const q = query(collection(db, 'publishers'), where('groupId', '==', selectedS21Group), where('status', '==', 'ativo'));
+      const q = query(collection(db, 'publishers'), where('groupId', '==', selectedS21Group), where('status', 'in', ['ativo', 'inativo']));
       const snap = await getDocs(q);
-      const publishers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const publishers = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a: any, b: any) => `${a.firstName || ''} ${a.lastName || ''}`.localeCompare(`${b.firstName || ''} ${b.lastName || ''}`));
       const items = await Promise.all(publishers.map(fetchPublisherS21));
       const groupName = s21GroupList.find((g: any) => g.id === selectedS21Group)?.name || selectedS21Group;
       setS21BatchItems(items);
@@ -490,7 +492,7 @@ export function PrintsView() {
                     >
                       <option value="">Selecionar Publicador</option>
                       {s21PublisherList
-                        .filter((p: any) => p.status === 'ativo')
+                        .filter((p: any) => p.status === 'ativo' || p.status === 'inativo')
                         .sort((a: any, b: any) => (a.firstName || '').localeCompare(b.firstName || ''))
                         .map((p: any) => (
                           <option key={p.id} value={p.id}>{[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}</option>
