@@ -268,9 +268,14 @@ export function PrintsView() {
     const s21Data: Record<string, any> = {};
     await Promise.all(serviceMonths.map(async (sm) => {
       const docId = `${sm.year}-${String(sm.month + 1).padStart(2, '0')}`;
-      const snap = await getDoc(doc(db, 'field_reports', publisher.id, 'months', docId));
-      if (snap.exists()) {
-        s21Data[docId] = snap.data();
+      try {
+        const docSnap = await getDoc(doc(db, 'field_reports', docId));
+        if (docSnap.exists()) {
+          const reports = docSnap.data().reports || {};
+          s21Data[docId] = reports[publisher.id] || { participou: false, estudos: '', auxiliar: false, horas: '', observacao: '' };
+        }
+      } catch (e) {
+        console.error(`S-21 load error for ${docId}:`, e);
       }
     }));
     return { publisher, s21Data };
