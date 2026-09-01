@@ -186,24 +186,6 @@ export function Dashboard({ onNavigate }: DashboardProps) {
         setStatsCount({ active: activePubs.length, totalHours, totalStudies, regularPioneers: 0, auxiliaryPioneers: 0 });
         setReportStats({ whoReported, whoReported6Months: 0, pubStudies, regPioneerReports, regPioneerHours, regPioneerStudies, auxPioneerReports, auxPioneerHours, auxPioneerStudies });
 
-        // DEBUG: per-group breakdown
-        console.log('=== DEBUG DASHBOARD ===');
-        console.log('Mês:', selectedMonthId);
-        console.log('Total activePubs:', activePubs.length);
-        console.log('Total missing:', missing.size);
-        const debugGroups = groups.map(g => {
-          const gp = activePubs.filter(p => p.groupId === g.id);
-          const gm = gp.filter(p => missing.has(p.id));
-          return { group: g.name, total: gp.length, missing: gm.length, names: gm.map(p => [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')) };
-        });
-        console.table(debugGroups);
-        const ungrouped = activePubs.filter(p => !p.groupId || !groups.some(g => g.id === p.groupId));
-        if (ungrouped.length > 0) {
-          const ungroupedMissing = ungrouped.filter(p => missing.has(p.id));
-          console.log(`Sem grupo: ${ungrouped.length} ativos, ${ungroupedMissing.length} faltam`);
-          console.log('Nomes:', ungrouped.map(p => [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')));
-        }
-        console.log('=======================');
       } catch (error) {
         if (!active) return;
         console.error("Error fetching current report:", error);

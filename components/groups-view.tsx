@@ -133,94 +133,78 @@ export function GroupsView() {
     const now = new Date();
     const dateStr = now.toLocaleDateString('pt-BR');
     const monthStr = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+    const allGroups = groups.map(group => {
+      const gp = publishers.filter((p: any) => p.groupId === group.id && p.status === 'ativo').sort((a: any, b: any) => (a.firstName || '').localeCompare(b.firstName || ''));
+      const sup = gp.find((p: any) => p.designations?.includes("Serviço de campo::Super. de Grupo"));
+      const aux = gp.find((p: any) => p.designations?.includes("Serviço de campo::Aux. Super. de Grupo"));
+      return { name: group.name, sup, aux, members: gp };
+    });
+
+    const groupIds = groups.map(g => g.id);
+    const ungrouped = publishers.filter((p: any) => p.status === 'ativo' && (!p.groupId || !groupIds.includes(p.groupId))).sort((a: any, b: any) => (a.firstName || '').localeCompare(b.firstName || ''));
+    if (ungrouped.length > 0) {
+      allGroups.push({ name: 'Sem Grupo', sup: undefined, aux: undefined, members: ungrouped });
+    }
+
+    const columnsPerPage = 4;
+    const totalPages = Math.ceil(allGroups.length / columnsPerPage);
+
+    let pagesHtml = '';
+    for (let page = 0; page < totalPages; page++) {
+      const start = page * columnsPerPage;
+      const pageGroups = allGroups.slice(start, start + columnsPerPage);
+      const columnsHtml = pageGroups.map(g => `
+        <div class="col">
+          <div class="group-name">${g.name}</div>
+          <div class="info">Super.: <strong>${g.sup ? [g.sup.firstName, g.sup.middleName, g.sup.lastName].filter(Boolean).join(' ') : '—'}</strong></div>
+          <div class="info">Aux.: <strong>${g.aux ? [g.aux.firstName, g.aux.middleName, g.aux.lastName].filter(Boolean).join(' ') : '—'}</strong></div>
+          <div class="members-title">${g.members.length} membro(s)</div>
+          <ul class="members">
+            ${g.members.map((p: any) => `<li>${[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}</li>`).join('')}
+          </ul>
+        </div>
+      `).join('');
+
+      pagesHtml += `
+        <div class="page">
+          <div class="header">
+            <h1>Grupos de Campo — Jardim Califórnia</h1>
+            <p>${dateStr}</p>
+          </div>
+          <div class="grid">${columnsHtml}</div>
+          <div class="footer">Página ${page + 1} de ${totalPages} — Mês de ${monthStr}</div>
+        </div>
+      `;
+    }
+
     printWindow.document.write(`
       <html>
       <head>
         <title>Grupos de Campo - Jardim Califórnia</title>
         <style>
-          @page { margin: 15mm; }
+          @page { size: portrait; margin: 10mm; }
           * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { font-family: Arial, sans-serif; color: #222; padding: 20px; }
-          h1 { font-size: 20px; margin-bottom: 4px; }
-          .subtitle { font-size: 12px; color: #666; margin-bottom: 20px; }
-          .group { margin-bottom: 24px; page-break-inside: avoid; }
-          .group-header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #333; padding-bottom: 6px; margin-bottom: 10px; }
-          .group-name { font-size: 16px; font-weight: bold; }
-          .group-count { font-size: 11px; color: #666; }
-          .leader { font-size: 12px; color: #444; margin-bottom: 8px; }
-          .leader span { font-weight: bold; }
-          table { width: 100%; border-collapse: collapse; font-size: 12px; }
-          th, td { padding: 6px 8px; text-align: left; border-bottom: 1px solid #ddd; }
-          th { background: #f5f5f5; font-weight: bold; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
-          .footer { margin-top: 30px; font-size: 10px; color: #999; text-align: center; border-top: 1px solid #ddd; padding-top: 10px; }
+          body { font-family: Arial, sans-serif; color: #222; }
+          .page { width: 100%; page-break-after: always; padding: 10px 0; }
+          .page:last-child { page-break-after: auto; }
+          .header { text-align: center; margin-bottom: 12px; border-bottom: 2px solid #333; padding-bottom: 6px; }
+          .header h1 { font-size: 16px; }
+          .header p { font-size: 10px; color: #666; }
+          .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+          .col { border: 1px solid #ccc; border-radius: 6px; padding: 8px; font-size: 10px; page-break-inside: avoid; }
+          .group-name { font-size: 12px; font-weight: bold; border-bottom: 1px solid #ddd; padding-bottom: 4px; margin-bottom: 6px; }
+          .info { font-size: 10px; color: #444; margin-bottom: 2px; }
+          .info strong { color: #000; }
+          .members-title { font-size: 9px; font-weight: bold; color: #666; text-transform: uppercase; margin-top: 6px; margin-bottom: 3px; }
+          .members { list-style: none; font-size: 10px; }
+          .members li { padding: 1px 0; border-bottom: 1px dotted #eee; }
+          .footer { margin-top: 10px; font-size: 9px; color: #999; text-align: center; }
           @media print { body { padding: 0; } }
         </style>
       </head>
       <body>
-        <h1>Grupos de Campo — Jardim Califórnia</h1>
-        <p class="subtitle">Relatório gerado em ${dateStr}</p>
-        ${groups.map(group => {
-          const gp = publishers.filter((p: any) => p.groupId === group.id).sort((a: any, b: any) => (a.firstName || '').localeCompare(b.firstName || ''));
-          const sup = gp.find((p: any) => p.designations?.includes("Serviço de campo::Super. de Grupo"));
-          const aux = gp.find((p: any) => p.designations?.includes("Serviço de campo::Aux. Super. de Grupo"));
-          return `
-            <div class="group">
-              <div class="group-header">
-                <span class="group-name">${group.name}</span>
-                <span class="group-count">${gp.length} publicador(es)</span>
-              </div>
-              <div class="leader">
-                Super.: <span>${sup ? `${sup.firstName} ${sup.lastName}` : 'Ninguém designado'}</span>
-                &nbsp;|&nbsp;
-                Aux.: <span>${aux ? `${aux.firstName} ${aux.lastName}` : 'Ninguém designado'}</span>
-              </div>
-              <table>
-                <thead>
-                  <tr><th style="width:40px">#</th><th>Nome</th><th style="width:100px">Responsabilidade</th><th style="width:80px">Pioneiro</th></tr>
-                </thead>
-                <tbody>
-                  ${gp.map((p: any, i: number) => `
-                    <tr>
-                      <td>${i + 1}</td>
-                      <td>${p.firstName || ''} ${p.lastName || ''}</td>
-                      <td>${p.responsibility === 'anciao' ? 'Ancião' : p.responsibility === 'servo' ? 'Servo Ministerial' : p.responsibility === 'estudante' ? 'Estudante' : 'Publicador'}</td>
-                      <td>${p.pioneerType === 'regular' ? 'Pioneiro Regular' : p.pioneerType === 'auxiliar' ? 'Auxiliar' : '-'}</td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
-            </div>
-          `;
-        }).join('')}
-        ${(() => {
-          const groupIds = groups.map(g => g.id);
-          const ungrouped = publishers.filter((p: any) => !p.groupId || !groupIds.includes(p.groupId)).sort((a: any, b: any) => (a.firstName || '').localeCompare(b.firstName || ''));
-          if (ungrouped.length === 0) return '';
-          return `
-            <div class="group">
-              <div class="group-header" style="border-color:#999;">
-                <span class="group-name" style="color:#666;">Sem Grupo</span>
-                <span class="group-count">${ungrouped.length} publicador(es)</span>
-              </div>
-              <table>
-                <thead>
-                  <tr><th style="width:40px">#</th><th>Nome</th><th style="width:100px">Responsabilidade</th><th style="width:80px">Pioneiro</th></tr>
-                </thead>
-                <tbody>
-                  ${ungrouped.map((p: any, i: number) => `
-                    <tr>
-                      <td>${i + 1}</td>
-                      <td>${p.firstName || ''} ${p.lastName || ''}</td>
-                      <td>${p.responsibility === 'anciao' ? 'Ancião' : p.responsibility === 'servo' ? 'Servo Ministerial' : p.responsibility === 'estudante' ? 'Estudante' : 'Publicador'}</td>
-                      <td>${p.pioneerType === 'regular' ? 'Pioneiro Regular' : p.pioneerType === 'auxiliar' ? 'Auxiliar' : '-'}</td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
-            </div>
-          `;
-        })()}
-        <div class="footer">Jardim Califórnia — Congregação de Testemunhas de Jeová — Mês de ${monthStr}</div>
+        ${pagesHtml}
       </body>
       </html>
     `);

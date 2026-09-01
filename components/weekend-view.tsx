@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Calendar,
-  Printer,
   Save,
   ChevronLeft,
   ChevronRight,
@@ -16,6 +15,7 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/components/auth-provider';
 import { handleFirestoreError, OperationType } from '@/lib/firebase-utils';
 import { mergeSuperintendent } from '@/lib/superintendent';
+import { PublisherInput, type PublisherInputProps } from '@/components/ui/publisher-input';
 import {
   collection,
   doc,
@@ -23,127 +23,34 @@ import {
   setDoc,
   query,
   getDoc,
-  getDocs,
 } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { MeetingPreviewModal, type MidweekPreviewData, type WeekendPreviewData } from '@/components/meeting-preview-modal';
 
-// ==========================================
-// AUTOCOMPLETE INPUT COMPONENT FOR PUBLISHERS
-// ==========================================
-interface PublisherInputProps {
-  value: string;
-  onChange: (value: string) => void;
-  publishers: any[];
-  roleName: string;
-  placeholder?: string;
+// Mapeamento de roles para designações do Fim de Semana
+const WEEKEND_ROLE_MAP: Record<string, string> = {
+  "Presidente": "Fim de semana::Presidente",
+  "Oração inicial": "Fim de semana::Oração inicial",
+  "Oração final": "Fim de semana::Oração final",
+  "Orador local": "Fim de semana::Orador local",
+  "Orador visitante": "Fim de semana::Orador fora",
+  "Dirigente A sentinela": "Fim de semana::Dirigente A Sentinela",
+  "Leitor A sentinela": "Fim de semana::Leitor",
+  "Indicador 01": "Designação Mecânica::Indicador",
+  "Indicador 02": "Designação Mecânica::Indicador",
+  "Microfone 01": "Designação Mecânica::Microfones",
+  "Microfone 02": "Designação Mecânica::Microfones",
+  "Palco": "Designação Mecânica::Palco",
+  "Audio e Video": "Designação Mecânica::Som",
+};
+
+function weekendGetDesignationKey(role: string): string {
+  return WEEKEND_ROLE_MAP[role] || "";
 }
 
-function PublisherInput({
-  value,
-  onChange,
-  publishers,
-  roleName,
-  placeholder = "Selecionar..."
-}: PublisherInputProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [search, setSearch] = useState(value);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setSearch(value || "");
-  }, [value]);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-        setSearch(value);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [value]);
-
-  const getRoleDesignationKey = (role: string): string => {
-    if (role === "Presidente") return "Fim de semana::Presidente";
-    if (role === "Oração inicial") return "Fim de semana::Oração inicial";
-    if (role === "Oração final") return "Fim de semana::Oração final";
-    if (role === "Orador local") return "Fim de semana::Orador local";
-    if (role === "Orador visitante") return "Fim de semana::Orador fora";
-    if (role === "Dirigente A sentinela") return "Fim de semana::Dirigente A Sentinela";
-    if (role === "Leitor A sentinela") return "Fim de semana::Leitor";
-    if (role === "Indicador 01" || role === "Indicador 02") return "Designação Mecânica::Indicador";
-    if (role === "Microfone 01" || role === "Microfone 02") return "Designação Mecânica::Microfones";
-    if (role === "Palco") return "Designação Mecânica::Palco";
-    if (role === "Audio e Video") return "Designação Mecânica::Som";
-    return "";
-  };
-
-  const designationKey = getRoleDesignationKey(roleName);
-
-  const filteredPubs = publishers
-    .filter(p => {
-      if (!p || !p.firstName || !p.lastName) return false;
-      const fullName = [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ').toLowerCase();
-      const matchesSearch = fullName.includes((search || "").toLowerCase());
-      const hasDesignation = designationKey ? p.designations?.includes(designationKey) : false;
-      return matchesSearch && hasDesignation;
-    })
-    .sort((a, b) => {
-      const nameA = `${a.firstName} ${a.lastName}`.toLowerCase();
-      const nameB = `${b.firstName} ${b.lastName}`.toLowerCase();
-      return nameA.localeCompare(nameB);
-    });
-
-  const handleSelect = (fullName: string) => {
-    onChange(fullName);
-    setSearch(fullName);
-    setIsOpen(false);
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setSearch(val);
-    onChange(val);
-  };
-
-  return (
-    <div ref={containerRef} className="relative w-full">
-      <div className="hidden print:block text-xs font-medium text-black border-b border-gray-300 pb-1 min-h-[18px]">
-        {value || "—"}
-      </div>
-
-      <input
-        type="text"
-        value={search}
-        onChange={handleInputChange}
-        onFocus={() => setIsOpen(true)}
-        placeholder={placeholder}
-        className="print:hidden w-full bg-[#1E293B]/20 border border-[#1E293B]/50 hover:border-[#1E293B] focus:border-[#0EA5E9] text-white rounded-lg px-3 py-1.5 h-10 text-xs focus:outline-none transition-all"
-      />
-      {isOpen && filteredPubs.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 max-h-60 overflow-y-auto bg-[#0F172A] border border-[#1E293B] rounded-xl shadow-xl scrollbar-thin">
-          <div className="p-1">
-            <div className="px-2 py-1 text-[9px] font-black text-[#0EA5E9] uppercase tracking-wider">{designationKey || roleName}</div>
-            {filteredPubs.map(p => {
-              const name = [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ');
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => handleSelect(name)}
-                  className="w-full text-left px-3 py-1.5 hover:bg-[#1E293B] rounded-lg text-xs text-white font-medium transition-colors"
-                >
-                  {name}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  );
+// Wrapper local que aplica o mapeamento do fim de semana automaticamente
+function WeekendPublisherInput(props: PublisherInputProps) {
+  return <PublisherInput {...props} getDesignationKey={weekendGetDesignationKey} />;
 }
 
 // ==========================================
@@ -215,7 +122,20 @@ export function WeekendView() {
   const [midweekData, setMidweekData] = useState<MidweekPreviewData | null>(null);
   const [savedWeeks, setSavedWeeks] = useState<string[]>([]);
   const [superintendentName, setSuperintendentName] = useState("");
-const [superintendentWife, setSuperintendentWife] = useState("");
+  const [superintendentWife, setSuperintendentWife] = useState("");
+  const [visitStartDate, setVisitStartDate] = useState("");
+  const [visitEndDate, setVisitEndDate] = useState("");
+
+  const autoSuperVisit = React.useMemo(() => {
+    if (!visitStartDate || !visitEndDate) return false;
+    const checkDate = new Date(selectedDate);
+    checkDate.setHours(0, 0, 0, 0);
+    const start = new Date(visitStartDate + 'T00:00:00');
+    const end = new Date(visitEndDate + 'T23:59:59');
+    return checkDate >= start && checkDate <= end;
+  }, [selectedDate, visitStartDate, visitEndDate]);
+
+  const isVisitActive = meetingData.showSuperVisit || autoSuperVisit;
 
   const getMondayStr = (date: Date): string => {
     const d = new Date(date);
@@ -391,10 +311,6 @@ const [superintendentWife, setSuperintendentWife] = useState("");
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   // Fetch superintendent name from settings
   useEffect(() => {
     if (!user) return;
@@ -408,6 +324,8 @@ const [superintendentWife, setSuperintendentWife] = useState("");
           superintendentName: data.circuitSuperintendent || "",
           superintendentDesignations: data.superintendentDesignations || [],
         });
+        setVisitStartDate(data.visitStartDate || "");
+        setVisitEndDate(data.visitEndDate || "");
       }
     });
     return () => unsubscribe();
@@ -509,10 +427,10 @@ const [superintendentWife, setSuperintendentWife] = useState("");
             {isSaving ? "Salvando..." : "Salvar Quadro"}
           </Button>
 
-          {meetingData.showSuperVisit && (
+          {isVisitActive && (
             <div className="flex items-center gap-2 h-10 px-4 bg-amber-600/20 border border-amber-600/40 rounded-xl text-amber-400 text-xs font-bold">
               <Calendar className="h-4 w-4" />
-              Visita Ativada no Meio de Semana
+              {meetingData.showSuperVisit ? "Visita Ativada no Meio de Semana" : "Visita Automática"}
             </div>
           )}
         </div>
@@ -536,7 +454,7 @@ const [superintendentWife, setSuperintendentWife] = useState("");
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider block mb-1">Oração inicial</label>
-              <PublisherInput
+              <WeekendPublisherInput
                 value={meetingData.openingPrayer}
                 onChange={(val) => updateField("openingPrayer", val)}
                 publishers={publishers}
@@ -546,7 +464,7 @@ const [superintendentWife, setSuperintendentWife] = useState("");
             </div>
             <div>
               <label className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider block mb-1">Oração final</label>
-              <PublisherInput
+              <WeekendPublisherInput
                 value={meetingData.closingPrayer}
                 onChange={(val) => updateField("closingPrayer", val)}
                 publishers={publishers}
@@ -556,7 +474,7 @@ const [superintendentWife, setSuperintendentWife] = useState("");
             </div>
             <div>
               <label className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider block mb-1">Presidente</label>
-              <PublisherInput
+              <WeekendPublisherInput
                 value={meetingData.president}
                 onChange={(val) => updateField("president", val)}
                 publishers={publishers}
@@ -570,7 +488,7 @@ const [superintendentWife, setSuperintendentWife] = useState("");
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider block mb-1">Orador local</label>
-              <PublisherInput
+              <WeekendPublisherInput
                 value={meetingData.localSpeaker}
                 onChange={(val) => updateField("localSpeaker", val)}
                 publishers={publishers}
@@ -807,7 +725,7 @@ const [superintendentWife, setSuperintendentWife] = useState("");
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider block mb-1">Dirigente A Sentinela</label>
-              <PublisherInput
+              <WeekendPublisherInput
                 value={meetingData.watchtowerConductor}
                 onChange={(val) => updateField("watchtowerConductor", val)}
                 publishers={publishers}
@@ -817,7 +735,7 @@ const [superintendentWife, setSuperintendentWife] = useState("");
             </div>
             <div>
               <label className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider block mb-1">Leitor A Sentinela</label>
-              <PublisherInput
+              <WeekendPublisherInput
                 value={meetingData.watchtowerReader}
                 onChange={(val) => updateField("watchtowerReader", val)}
                 publishers={publishers}
@@ -828,7 +746,7 @@ const [superintendentWife, setSuperintendentWife] = useState("");
           </div>
 
           {/* Visita do Superintendente - Tema e Orador (abaixo de Sentinela/Leitor) */}
-          {meetingData.showSuperVisit && (
+          {isVisitActive && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider block mb-1">Tema da Visita</label>
@@ -869,7 +787,7 @@ const [superintendentWife, setSuperintendentWife] = useState("");
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div>
             <label className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider block mb-1">Indicador 01</label>
-            <PublisherInput
+            <WeekendPublisherInput
               value={meetingData.mechanicalIndicador1}
               onChange={(val) => updateField("mechanicalIndicador1", val)}
               publishers={publishers}
@@ -879,7 +797,7 @@ const [superintendentWife, setSuperintendentWife] = useState("");
           </div>
           <div>
             <label className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider block mb-1">Indicador 02</label>
-            <PublisherInput
+            <WeekendPublisherInput
               value={meetingData.mechanicalIndicador2}
               onChange={(val) => updateField("mechanicalIndicador2", val)}
               publishers={publishers}
@@ -889,7 +807,7 @@ const [superintendentWife, setSuperintendentWife] = useState("");
           </div>
           <div>
             <label className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider block mb-1">Microfone 01</label>
-            <PublisherInput
+            <WeekendPublisherInput
               value={meetingData.mechanicalMicrofone1}
               onChange={(val) => updateField("mechanicalMicrofone1", val)}
               publishers={publishers}
@@ -899,7 +817,7 @@ const [superintendentWife, setSuperintendentWife] = useState("");
           </div>
           <div>
             <label className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider block mb-1">Microfone 02</label>
-            <PublisherInput
+            <WeekendPublisherInput
               value={meetingData.mechanicalMicrofone2}
               onChange={(val) => updateField("mechanicalMicrofone2", val)}
               publishers={publishers}
@@ -909,7 +827,7 @@ const [superintendentWife, setSuperintendentWife] = useState("");
           </div>
           <div>
             <label className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider block mb-1">Palco</label>
-            <PublisherInput
+            <WeekendPublisherInput
               value={meetingData.mechanicalPalco}
               onChange={(val) => updateField("mechanicalPalco", val)}
               publishers={publishers}
@@ -919,7 +837,7 @@ const [superintendentWife, setSuperintendentWife] = useState("");
           </div>
           <div>
             <label className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider block mb-1">Audio e Video</label>
-            <PublisherInput
+            <WeekendPublisherInput
               value={meetingData.mechanicalAudioVideo}
               onChange={(val) => updateField("mechanicalAudioVideo", val)}
               publishers={publishers}

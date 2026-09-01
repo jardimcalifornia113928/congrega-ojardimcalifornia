@@ -48,7 +48,6 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import { toast } from 'sonner';
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { TerritoryPdfPreviewModal } from '@/components/territory-pdf-preview-modal';
 import { RegistroPdfPreviewModal } from '@/components/registro-pdf-preview-modal';
 
@@ -164,6 +163,7 @@ function croppedImgStyle(crop: TerritoryCrop | null): React.CSSProperties {
 }
 
 async function generateTerritoryPdf(t: Territory): Promise<Uint8Array> {
+  const { PDFDocument, rgb, StandardFonts } = await import('pdf-lib');
   const res = await fetch(`/territorio/${t.number}.pdf`);
   if (!res.ok) throw new Error('PDF do território indisponível');
   const bytes = await res.arrayBuffer();
@@ -261,7 +261,7 @@ export function TerritoriesView() {
         id: doc.id,
         ...doc.data()
       })) as Territory[];
-      data.sort((a, b) => a.number.localeCompare(b.number, undefined, { numeric: true }));
+      data.sort((a, b) => (a.dataDesignacao || '').localeCompare(b.dataDesignacao || '') || a.number.localeCompare(b.number, undefined, { numeric: true }));
       setTerritories(data);
       setIsLoading(false);
     }, (error: unknown) => {
@@ -570,6 +570,7 @@ export function TerritoriesView() {
                         <img
                           src={`/territorio/${t.number}.png`}
                           alt={`Território ${t.number}`}
+                          loading="lazy"
                           className={territoryCrop ? '' : 'w-full h-full object-cover'}
                           style={croppedImgStyle(territoryCrop)}
                         />
@@ -664,6 +665,7 @@ export function TerritoriesView() {
                               <img
                                 src={`/territorio/${t.number}.png`}
                                 alt={`Território ${t.number}`}
+                                loading="lazy"
                                 className={territoryCrop ? '' : 'w-full h-full object-cover'}
                                 style={croppedImgStyle(territoryCrop)}
                               />

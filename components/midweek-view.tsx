@@ -12,143 +12,17 @@ import {
   Users,
   Wrench,
   Eye,
-  Upload,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/components/auth-provider';
 import { handleFirestoreError, OperationType } from '@/lib/firebase-utils';
 import { mergeSuperintendent } from '@/lib/superintendent';
-import { collection, doc, getDoc, onSnapshot, setDoc, query, getDocs } from 'firebase/firestore';
+import { PublisherInput } from '@/components/ui/publisher-input';
+import { collection, doc, getDoc, onSnapshot, setDoc, query } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { MeetingPreviewModal, MidweekPreviewData, WeekendPreviewData } from '@/components/meeting-preview-modal';
 import { SchoolPreviewModal } from '@/components/school-preview-modal';
-
-// ==========================================
-// AUTOCOMPLETE INPUT COMPONENT FOR PUBLISHERS
-// ==========================================
-interface PublisherInputProps {
-  value: string;
-  onChange: (value: string) => void;
-  publishers: any[];
-  roleName: string;
-  placeholder?: string;
-}
-
-function PublisherInput({
-  value,
-  onChange,
-  publishers,
-  roleName,
-  placeholder = "Selecionar..."
-}: PublisherInputProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [search, setSearch] = useState(value);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setSearch(value);
-  }, [value]);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-        setSearch(value);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [value]);
-
-  const getRoleDesignationKey = (role: string): string => {
-    if (role === "Presidente") return "Tesouros da Palavra::Presidente";
-    if (role === "Oração inicial") return "Tesouros da Palavra::Oração inicial";
-    if (role === "Oração final") return "Tesouros da Palavra::Oração final";
-    if (role === "Discurso 10min") return "Tesouros da Palavra::Discurso 10min";
-    if (role === "Joias espirituais") return "Tesouros da Palavra::Joias espirituais";
-    if (role === "Leitura da Bíblia") return "Tesouros da Palavra::Leitura da Bíblia";
-    if (role === "Iniciando conversas") return "Vida e Ministério::Iniciando conversas";
-    if (role === "Cultivando o interesse") return "Vida e Ministério::Cultivando o interesse";
-    if (role === "Discurso") return "Vida e Ministério::Discurso";
-    if (role === "Ajudante") return "Vida e Ministério::Ajudante";
-    if (role === "Parte de Vida") return "Nossa vida cristã::Partes";
-    if (role === "Estudo Bíblico de Congregação") return "Nossa vida cristã::Estudo Bíblico";
-    if (role === "EBC Leitor") return "Nossa vida cristã::Leitor";
-    if (role === "Indicador 01" || role === "Indicador 02") return "Designação Mecânica::Indicador";
-    if (role === "Microfone 01" || role === "Microfone 02") return "Designação Mecânica::Microfones";
-    if (role === "Palco") return "Designação Mecânica::Palco";
-    if (role === "Audio e Video") return "Designação Mecânica::Som";
-    return "";
-  };
-
-  const designationKey = getRoleDesignationKey(roleName);
-
-  const filteredPubs = publishers
-    .filter(p => {
-      if (!p || !p.firstName || !p.lastName) return false;
-      const fullName = [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ').toLowerCase();
-      const matchesSearch = fullName.includes((search || "").toLowerCase());
-      const hasDesignation = designationKey ? p.designations?.includes(designationKey) : false;
-      return matchesSearch && hasDesignation;
-    })
-    .sort((a, b) => {
-      const nameA = `${a.firstName} ${a.lastName}`.toLowerCase();
-      const nameB = `${b.firstName} ${b.lastName}`.toLowerCase();
-      return nameA.localeCompare(nameB);
-    });
-
-  const handleSelect = (fullName: string) => {
-    onChange(fullName);
-    setSearch(fullName);
-    setIsOpen(false);
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setSearch(val);
-    onChange(val);
-  };
-
-  return (
-    <div ref={containerRef} className="relative w-full">
-      {/* Visualização de Impressão */}
-      <div className="hidden print:block text-xs font-medium text-black border-b border-gray-300 pb-1 min-h-[18px]">
-        {value || "—"}
-      </div>
-
-      {/* Input de Edição */}
-      <input
-        type="text"
-        value={search}
-        onChange={handleInputChange}
-        onFocus={() => setIsOpen(true)}
-        placeholder={placeholder}
-        className="print:hidden w-full bg-[#1E293B]/20 border border-[#1E293B]/50 hover:border-[#1E293B] focus:border-[#0EA5E9] text-white rounded-lg px-3 py-1.5 h-10 text-xs focus:outline-none transition-all"
-      />
-      {isOpen && filteredPubs.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 max-h-60 overflow-y-auto bg-[#0F172A] border border-[#1E293B] rounded-xl shadow-xl scrollbar-thin">
-          <div className="p-1">
-            <div className="px-2 py-1 text-[9px] font-black text-[#0EA5E9] uppercase tracking-wider">{designationKey || roleName}</div>
-            {filteredPubs.map(p => {
-              const name = [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ');
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => handleSelect(name)}
-                  className="w-full text-left px-3 py-1.5 hover:bg-[#1E293B] rounded-lg text-xs text-white font-medium transition-colors"
-                >
-                  {name}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ==========================================
 // MAIN MIDWEEK VIEW COMPONENT
@@ -334,6 +208,20 @@ export function MidweekView() {
   const [isSchoolLoading, setIsSchoolLoading] = useState(false);
   const [superintendentName, setSuperintendentName] = useState("");
   const [superintendentWife, setSuperintendentWife] = useState("");
+  const [visitStartDate, setVisitStartDate] = useState("");
+  const [visitEndDate, setVisitEndDate] = useState("");
+
+  // Calculate auto visit: true if selectedDate (Monday) falls within visit period
+  const autoSuperVisit = React.useMemo(() => {
+    if (!visitStartDate || !visitEndDate) return false;
+    const checkDate = new Date(selectedDate);
+    checkDate.setHours(0, 0, 0, 0);
+    const start = new Date(visitStartDate + 'T00:00:00');
+    const end = new Date(visitEndDate + 'T23:59:59');
+    return checkDate >= start && checkDate <= end;
+  }, [selectedDate, visitStartDate, visitEndDate]);
+
+  const isVisitActive = meetingData.showSuperVisit || autoSuperVisit;
 
   // Get Monday Date String for document ID (format: YYYY-MM-DD)
   const getMondayStr = (date: Date): string => {
@@ -497,7 +385,7 @@ export function MidweekView() {
         lifePart2Theme: f(meetingData.lifePart2Theme), lifePart2Speaker: f(meetingData.lifePart2Speaker),
         lifePart3Theme: f(meetingData.lifePart3Theme), lifePart3Speaker: f(meetingData.lifePart3Speaker),
         cbsConductor: f(meetingData.cbsConductor), cbsReader: f(meetingData.cbsReader),
-        superVisitTheme: f(meetingData.superVisitTheme), superVisitSuperintendent: f(meetingData.superVisitSuperintendent), showSuperVisit: meetingData.showSuperVisit,
+        superVisitTheme: f(meetingData.superVisitTheme), superVisitSuperintendent: f(meetingData.superVisitSuperintendent), showSuperVisit: isVisitActive,
         superintendentName: f(superintendentName), superintendentWife: f(superintendentWife),
         mechanicalIndicador1: f(meetingData.mechanicalIndicador1),
         mechanicalIndicador2: f(meetingData.mechanicalIndicador2),
@@ -578,6 +466,8 @@ export function MidweekView() {
           superintendentName: data.circuitSuperintendent || "",
           superintendentDesignations: data.superintendentDesignations || [],
         });
+        setVisitStartDate(data.visitStartDate || "");
+        setVisitEndDate(data.visitEndDate || "");
       }
     });
     return () => unsubscribe();
@@ -695,11 +585,21 @@ export function MidweekView() {
                     });
                 }
               }}
-              className={`h-10 font-bold rounded-xl px-4 text-xs gap-2 ${meetingData.showSuperVisit ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'bg-[#1E293B] hover:bg-[#334155] text-[#94A3B8]'} border border-[#1E293B] ${!isAdmin ? 'opacity-50 cursor-not-allowed' : ''} no-print`}
-              title={!isAdmin ? "Apenas administradores podem ativar" : ""}
+              className={`h-10 font-bold rounded-xl px-4 text-xs gap-2 ${
+                meetingData.showSuperVisit
+                  ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                  : autoSuperVisit
+                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                    : 'bg-[#1E293B] hover:bg-[#334155] text-[#94A3B8]'
+              } border border-[#1E293B] ${!isAdmin ? 'opacity-50 cursor-not-allowed' : ''} no-print`}
+              title={!isAdmin ? "Apenas administradores podem ativar" : autoSuperVisit ? "Visita automática por data" : ""}
             >
               <Calendar className="h-4 w-4" />
-              {meetingData.showSuperVisit ? "Visita Ativa" : "Visita Superintendente"}
+              {meetingData.showSuperVisit
+                ? "Visita Ativa"
+                : autoSuperVisit
+                  ? "Visita Automática"
+                  : "Visita Superintendente"}
             </Button>
           </div>
         </div>
@@ -988,8 +888,24 @@ export function MidweekView() {
                     placeholder="Estudante"
                   />
                 </div>
-                <div className="w-full sm:w-56" />
-                <div className="w-full sm:w-56" />
+                <div className="w-full sm:w-56">
+                  <PublisherInput
+                    value={meetingData.part4Assistant}
+                    onChange={(val) => updateField("part4Assistant", val)}
+                    publishers={publishers}
+                    roleName="Ajudante"
+                    placeholder="Ajudante"
+                  />
+                </div>
+                <div className="w-full sm:w-56">
+                  <PublisherInput
+                    value={meetingData.part4SecondHelper}
+                    onChange={(val) => updateField("part4SecondHelper", val)}
+                    publishers={publishers}
+                    roleName="Ajudante"
+                    placeholder="Ajudante"
+                  />
+                </div>
               </div>
             </div>
 
@@ -1111,7 +1027,7 @@ export function MidweekView() {
             </div>
 
             {/* Visita do Superintendente */}
-            {meetingData.showSuperVisit && (
+            {isVisitActive && (
               <div className="border-t border-[#0EA5E9]/30 pt-4 mt-4">
                 <h4 className="text-[11px] font-black text-amber-400 uppercase tracking-wider mb-3">Visita do Superintendente</h4>
                 <div className="space-y-3">

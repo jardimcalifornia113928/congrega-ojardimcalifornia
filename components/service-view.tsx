@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ChevronDown, User, X, Printer, Eye, FileText } from 'lucide-react';
 import { useAuth } from '@/components/auth-provider';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query } from 'firebase/firestore';
+import { collection, onSnapshot, query, doc } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { ServicePrintView } from './service-print-view';
 
@@ -21,6 +21,13 @@ interface Publisher {
 
 interface ServiceViewProps {
   onDirtyChange?: (dirty: boolean) => void;
+}
+
+const SAIDA_DESIGNATION = "Serviço de campo::Saída de campo";
+const DIRIGENTE_DESIGNATION = "Serviço de campo::Dirigente de campo";
+
+function fullName(p: Publisher) {
+  return [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ');
 }
 
 interface ScheduleRow {
@@ -148,6 +155,11 @@ export function ServiceView({ onDirtyChange }: ServiceViewProps) {
   const [weekDesignation, setWeekDesignation] = useState("");
   const [saturdayDesignation, setSaturdayDesignation] = useState("");
   const [sundayDesignation, setSundayDesignation] = useState("");
+  const [superintendentName, setSuperintendentName] = useState("");
+  const [superintendentDesignations, setSuperintendentDesignations] = useState<string[]>([]);
+  const [visitStartDate, setVisitStartDate] = useState("");
+  const [visitEndDate, setVisitEndDate] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const months = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -155,6 +167,31 @@ export function ServiceView({ onDirtyChange }: ServiceViewProps) {
   ];
   const currentMonth = new Date().getMonth();
   const [selectedMonth, setSelectedMonth] = useState(months[currentMonth]);
+
+  // Check if superintendent visit is active for the selected month
+  const isSuperVisitActive = React.useMemo(() => {
+    if (!superintendentDesignations.includes("Dirigente de campo")) return false;
+    if (!visitStartDate || !visitEndDate) return false;
+    const monthIdx = months.indexOf(selectedMonth);
+    if (monthIdx < 0) return false;
+    const year = new Date().getFullYear();
+    const monthStart = new Date(year, monthIdx, 1);
+    const monthEnd = new Date(year, monthIdx + 1, 0);
+    const visitStart = new Date(visitStartDate + 'T00:00:00');
+    const visitEnd = new Date(visitEndDate + 'T23:59:59');
+    return monthStart <= visitEnd && monthEnd >= visitStart;
+  }, [selectedMonth, superintendentDesignations, visitStartDate, visitEndDate]);
+
+  // All dirigentes (regular + superintendent when visit is active)
+  const allDirigentes = React.useMemo(() => {
+    const regular = publishers
+      .filter(p => p.designations?.includes(DIRIGENTE_DESIGNATION))
+      .sort((a, b) => fullName(a).localeCompare(fullName(b)));
+    if (isSuperVisitActive && superintendentName) {
+      return [...regular, { id: '__superintendent__', firstName: superintendentName, middleName: '', lastName: '', designations: [], groupId: '' }];
+    }
+    return regular;
+  }, [publishers, isSuperVisitActive, superintendentName]);
 
   const weekDaysList = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"];
   const [weekSchedule, setWeekSchedule] = useState(
@@ -234,8 +271,6 @@ export function ServiceView({ onDirtyChange }: ServiceViewProps) {
     });
   };
 
-  const [saving, setSaving] = useState(false);
-
   useEffect(() => {
     const unsubPubs = onSnapshot(collection(db, 'publishers'), (snapshot) => {
       const pubs: Publisher[] = [];
@@ -278,6 +313,22 @@ export function ServiceView({ onDirtyChange }: ServiceViewProps) {
       unsubGroups();
     };
   }, []);
+
+  // Fetch superintendent settings
+  useEffect(() => {
+    if (!user) return;
+    const docRef = doc(db, 'settings', `congregation_${user.uid}`);
+    const unsub = onSnapshot(docRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setSuperintendentName(data.circuitSuperintendent || "");
+        setSuperintendentDesignations(data.superintendentDesignations || []);
+        setVisitStartDate(data.visitStartDate || "");
+        setVisitEndDate(data.visitEndDate || "");
+      }
+    });
+    return () => unsub();
+  }, [user]);
 
   useEffect(() => {
     let cancelled = false;
@@ -439,37 +490,33 @@ export function ServiceView({ onDirtyChange }: ServiceViewProps) {
     );
   }
 
+  const inputClass = "w-full px-2 py-1.5 text-sm bg-slate-800 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500";
+  const selectClass = "w-full px-2 py-1.5 text-sm bg-slate-800 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500";
+
+  const saidas = publishers
+    .filter(p => p.designations?.includes(SAIDA_DESIGNATION))
+    .sort((a, b) => fullName(a).localeCompare(fullName(b)));
+
   return (
     <div className="space-y-6 h-full overflow-auto pb-6">
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h1 className="text-2xl font-bold text-gray-900">Serviço de Campo</h1>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setShowPrint(true)}
-            className="border-blue-600 text-blue-600 hover:bg-blue-50"
-          >
-            <Eye className="h-4 w-4 mr-2" />
-            Visualização
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setShowPrint(true)} className="border-blue-600 text-blue-600 hover:bg-blue-50 text-xs">
+            <Eye className="h-4 w-4 mr-1" /> Visualização
           </Button>
-          <Button
-            variant="outline"
-            onClick={handleClear}
-            disabled={saving}
-          >
+          <Button variant="outline" onClick={handleClear} disabled={saving} className="text-xs">
             Limpar
           </Button>
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
+          <Button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-xs">
             {saving ? 'Salvando...' : 'Salvar'}
           </Button>
         </div>
       </div>
 
-      <div className="flex items-center gap-3 mb-6">
+      {/* Seletor de Mês */}
+      <div className="flex items-center gap-3">
         <label className="text-sm font-medium text-slate-300">Mês:</label>
         <select
           value={selectedMonth}
@@ -483,23 +530,24 @@ export function ServiceView({ onDirtyChange }: ServiceViewProps) {
       </div>
 
       <div className="flex flex-col gap-6">
+
+        {/* ============ DESIGNAÇÃO SEMANA ============ */}
         <Card className="bg-slate-900 border-slate-700/50 shadow-sm rounded-3xl overflow-hidden">
           <CardHeader className="px-4 py-3 bg-slate-800/30 border-b border-slate-700/50">
-            <CardTitle className="text-sm font-bold text-white uppercase tracking-wider">
-              Designação Semana
-            </CardTitle>
+            <CardTitle className="text-sm font-bold text-white uppercase tracking-wider">Designação Semana</CardTitle>
           </CardHeader>
           <CardContent className="p-4">
-            <table className="w-full text-sm table-fixed">
+            {/* Tabela desktop */}
+            <table className="w-full text-sm table-fixed hidden md:table">
               <colgroup>
-                <col className="w-32" />
                 <col className="w-28" />
-                <col className="w-44" />
-                <col className="w-44" />
+                <col className="w-24" />
+                <col className="w-1/3" />
+                <col className="w-1/3" />
               </colgroup>
               <thead>
                 <tr className="border-b border-slate-700">
-                  <th className="text-left text-xs font-medium text-slate-400 pb-2 pr-2">Dia da Semana</th>
+                  <th className="text-left text-xs font-medium text-slate-400 pb-2 pr-2">Dia</th>
                   <th className="text-left text-xs font-medium text-slate-400 pb-2 pr-2">Horário</th>
                   <th className="text-left text-xs font-medium text-slate-400 pb-2 pr-2">Local</th>
                   <th className="text-left text-xs font-medium text-slate-400 pb-2">Dirigente</th>
@@ -510,67 +558,74 @@ export function ServiceView({ onDirtyChange }: ServiceViewProps) {
                   <tr key={row.day} className="border-b border-slate-800">
                     <td className="py-2 pr-2 text-white font-medium">{row.day}</td>
                     <td className="py-2 pr-2">
-                      <input
-                        type="time"
-                        value={row.time}
-                        onChange={(e) => updateWeekSchedule(index, "time", e.target.value)}
-                        className="w-full px-2 py-1 text-sm bg-slate-800 border border-slate-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
+                      <input type="time" value={row.time} onChange={(e) => updateWeekSchedule(index, "time", e.target.value)} className={inputClass} />
                     </td>
                     <td className="py-2 pr-2">
-                      <select
-                        value={row.location}
-                        onChange={(e) => updateWeekSchedule(index, "location", e.target.value)}
-                        className="w-full px-2 py-1 text-sm bg-slate-800 border border-slate-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
+                      <select value={row.location} onChange={(e) => updateWeekSchedule(index, "location", e.target.value)} className={selectClass}>
                         <option value="">Selecionar...</option>
-                        {publishers
-                          .filter(p => p.designations?.includes("Serviço de campo::Saída de campo"))
-                          .sort((a, b) => [a.firstName, a.middleName, a.lastName].filter(Boolean).join(' ').localeCompare([b.firstName, b.middleName, b.lastName].filter(Boolean).join(' ')))
-                          .map(p => (
-                            <option key={p.id} value={[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}>
-                              {[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}
-                            </option>
-                          ))}
+                        {saidas.map(p => (
+                          <option key={p.id} value={fullName(p)}>{fullName(p)}</option>
+                        ))}
                       </select>
                     </td>
                     <td className="py-2">
-                      <select
-                        value={row.leader}
-                        onChange={(e) => updateWeekSchedule(index, "leader", e.target.value)}
-                        className="w-full px-2 py-1 text-sm bg-slate-800 border border-slate-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
+                      <select value={row.leader} onChange={(e) => updateWeekSchedule(index, "leader", e.target.value)} className={selectClass}>
                         <option value="">Selecionar...</option>
-                        {publishers
-                          .filter(p => p.designations?.includes("Serviço de campo::Dirigente de campo"))
-                          .sort((a, b) => [a.firstName, a.middleName, a.lastName].filter(Boolean).join(' ').localeCompare([b.firstName, b.middleName, b.lastName].filter(Boolean).join(' ')))
-                          .map(p => (
-                            <option key={p.id} value={[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}>
-                              {[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}
-                            </option>
-                          ))}
+                        {allDirigentes.map(p => (
+                          <option key={p.id} value={fullName(p)}>{fullName(p)}</option>
+                        ))}
                       </select>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            {/* Cards mobile */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:hidden">
+              {weekSchedule.map((row, index) => (
+                <div key={row.day} className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 space-y-2">
+                  <p className="text-xs font-bold text-white uppercase">{row.day}</p>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase">Horário</label>
+                    <input type="time" value={row.time} onChange={(e) => updateWeekSchedule(index, "time", e.target.value)} className={inputClass} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase">Local</label>
+                    <select value={row.location} onChange={(e) => updateWeekSchedule(index, "location", e.target.value)} className={selectClass}>
+                      <option value="">Selecionar...</option>
+                      {saidas.map(p => (
+                        <option key={p.id} value={fullName(p)}>{fullName(p)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase">Dirigente</label>
+                    <select value={row.leader} onChange={(e) => updateWeekSchedule(index, "leader", e.target.value)} className={selectClass}>
+                      <option value="">Selecionar...</option>
+                      {allDirigentes.map(p => (
+                        <option key={p.id} value={fullName(p)}>{fullName(p)}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
+        {/* ============ DESIGNAÇÃO SÁBADO ============ */}
         <Card className="bg-slate-900 border-slate-700/50 shadow-sm rounded-3xl overflow-hidden">
           <CardHeader className="px-4 py-3 bg-slate-800/30 border-b border-slate-700/50">
-            <CardTitle className="text-sm font-bold text-white uppercase tracking-wider">
-              Designação Sábado
-            </CardTitle>
+            <CardTitle className="text-sm font-bold text-white uppercase tracking-wider">Designação Sábado</CardTitle>
           </CardHeader>
           <CardContent className="p-4">
-            <table className="w-full text-sm table-fixed">
+            {/* Tabela desktop */}
+            <table className="w-full text-sm table-fixed hidden md:table">
               <colgroup>
-                <col className="w-32" />
                 <col className="w-28" />
-                <col className="w-44" />
-                <col className="w-44" />
+                <col className="w-24" />
+                <col className="w-1/3" />
+                <col className="w-1/3" />
               </colgroup>
               <thead>
                 <tr className="border-b border-slate-700">
@@ -585,138 +640,150 @@ export function ServiceView({ onDirtyChange }: ServiceViewProps) {
                   <tr key={row.date} className="border-b border-slate-800">
                     <td className="py-2 pr-2 text-white font-medium">{row.date}</td>
                     <td className="py-2 pr-2">
-                      <input
-                        type="time"
-                        value={row.time}
-                        onChange={(e) => updateSaturdaySchedule(index, "time", e.target.value)}
-                        className="w-full px-2 py-1 text-sm bg-slate-800 border border-slate-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
+                      <input type="time" value={row.time} onChange={(e) => updateSaturdaySchedule(index, "time", e.target.value)} className={inputClass} />
                     </td>
                     <td className="py-2 pr-2">
-                      <select
-                        value={row.location}
-                        onChange={(e) => updateSaturdaySchedule(index, "location", e.target.value)}
-                        className="w-full px-2 py-1 text-sm bg-slate-800 border border-slate-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
+                      <select value={row.location} onChange={(e) => updateSaturdaySchedule(index, "location", e.target.value)} className={selectClass}>
                         <option value="">Selecionar...</option>
-                        {publishers
-                          .filter(p => p.designations?.includes("Serviço de campo::Saída de campo"))
-                          .sort((a, b) => [a.firstName, a.middleName, a.lastName].filter(Boolean).join(' ').localeCompare([b.firstName, b.middleName, b.lastName].filter(Boolean).join(' ')))
-                          .map(p => (
-                            <option key={p.id} value={[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}>
-                              {[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}
-                            </option>
-                          ))}
+                        {saidas.map(p => (
+                          <option key={p.id} value={fullName(p)}>{fullName(p)}</option>
+                        ))}
                       </select>
                     </td>
                     <td className="py-2">
-                      <select
-                        value={row.leader}
-                        onChange={(e) => updateSaturdaySchedule(index, "leader", e.target.value)}
-                        className="w-full px-2 py-1 text-sm bg-slate-800 border border-slate-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
+                      <select value={row.leader} onChange={(e) => updateSaturdaySchedule(index, "leader", e.target.value)} className={selectClass}>
                         <option value="">Selecionar...</option>
-                        {publishers
-                          .filter(p => p.designations?.includes("Serviço de campo::Dirigente de campo"))
-                          .sort((a, b) => [a.firstName, a.middleName, a.lastName].filter(Boolean).join(' ').localeCompare([b.firstName, b.middleName, b.lastName].filter(Boolean).join(' ')))
-                          .map(p => (
-                            <option key={p.id} value={[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}>
-                              {[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}
-                            </option>
-                          ))}
+                        {allDirigentes.map(p => (
+                          <option key={p.id} value={fullName(p)}>{fullName(p)}</option>
+                        ))}
                       </select>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            {/* Cards mobile */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:hidden">
+              {saturdaySchedule.map((row, index) => (
+                <div key={row.date} className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 space-y-2">
+                  <p className="text-xs font-bold text-white uppercase">{row.date}</p>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase">Horário</label>
+                    <input type="time" value={row.time} onChange={(e) => updateSaturdaySchedule(index, "time", e.target.value)} className={inputClass} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase">Local</label>
+                    <select value={row.location} onChange={(e) => updateSaturdaySchedule(index, "location", e.target.value)} className={selectClass}>
+                      <option value="">Selecionar...</option>
+                      {saidas.map(p => (
+                        <option key={p.id} value={fullName(p)}>{fullName(p)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase">Dirigente</label>
+                    <select value={row.leader} onChange={(e) => updateSaturdaySchedule(index, "leader", e.target.value)} className={selectClass}>
+                      <option value="">Selecionar...</option>
+                      {allDirigentes.map(p => (
+                        <option key={p.id} value={fullName(p)}>{fullName(p)}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
+        {/* ============ DESIGNAÇÃO DOMINGO ============ */}
         <Card className="bg-slate-900 border-slate-700/50 shadow-sm rounded-3xl overflow-hidden">
           <CardHeader className="px-4 py-3 bg-slate-800/30 border-b border-slate-700/50">
-            <CardTitle className="text-sm font-bold text-white uppercase tracking-wider">
-              Designação Domingo
-            </CardTitle>
+            <CardTitle className="text-sm font-bold text-white uppercase tracking-wider">Designação Domingo</CardTitle>
           </CardHeader>
           <CardContent className="p-4 space-y-6">
             {[
               { name: "Lontras", subtitle: "Macaco", schedule: sundayLontras, update: updateSundayLontras },
               { name: "Praia", subtitle: "Raposa", schedule: sundayPraia, update: updateSundayPraia }
-            ].map(groupInfo => {
-              return (
-                <div key={groupInfo.name} className="space-y-2">
-                  <h3 className="text-sm font-bold text-[#0EA5E9] uppercase tracking-wider">
-                    {groupInfo.name} - {groupInfo.subtitle}
-                  </h3>
-                  <table className="w-full text-sm table-fixed">
-                    <colgroup>
-                      <col className="w-32" />
-                      <col className="w-28" />
-                      <col className="w-44" />
-                      <col className="w-44" />
-                    </colgroup>
-                    <thead>
-                      <tr className="border-b border-slate-700">
-                        <th className="text-left text-xs font-medium text-slate-400 pb-2 pr-2">Data</th>
-                        <th className="text-left text-xs font-medium text-slate-400 pb-2 pr-2">Horário</th>
-                        <th className="text-left text-xs font-medium text-slate-400 pb-2 pr-2">Local</th>
-                        <th className="text-left text-xs font-medium text-slate-400 pb-2">Dirigente</th>
+            ].map(groupInfo => (
+              <div key={groupInfo.name} className="space-y-3">
+                <h3 className="text-sm font-bold text-[#0EA5E9] uppercase tracking-wider">
+                  {groupInfo.name} - {groupInfo.subtitle}
+                </h3>
+                {/* Tabela desktop */}
+                <table className="w-full text-sm table-fixed hidden md:table">
+                  <colgroup>
+                    <col className="w-28" />
+                    <col className="w-24" />
+                    <col className="w-1/3" />
+                    <col className="w-1/3" />
+                  </colgroup>
+                  <thead>
+                    <tr className="border-b border-slate-700">
+                      <th className="text-left text-xs font-medium text-slate-400 pb-2 pr-2">Data</th>
+                      <th className="text-left text-xs font-medium text-slate-400 pb-2 pr-2">Horário</th>
+                      <th className="text-left text-xs font-medium text-slate-400 pb-2 pr-2">Local</th>
+                      <th className="text-left text-xs font-medium text-slate-400 pb-2">Dirigente</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {groupInfo.schedule.map((row, index) => (
+                      <tr key={`${groupInfo.name}-${row.date}`} className="border-b border-slate-800">
+                        <td className="py-2 pr-2 text-white font-medium">{row.date}</td>
+                        <td className="py-2 pr-2">
+                          <input type="time" value={row.time} onChange={(e) => groupInfo.update(index, "time", e.target.value)} className={inputClass} />
+                        </td>
+                        <td className="py-2 pr-2">
+                          <select value={row.location} onChange={(e) => groupInfo.update(index, "location", e.target.value)} className={selectClass}>
+                            <option value="">Selecionar...</option>
+                            {saidas.map(p => (
+                              <option key={p.id} value={fullName(p)}>{fullName(p)}</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="py-2">
+                          <select value={row.leader} onChange={(e) => groupInfo.update(index, "leader", e.target.value)} className={selectClass}>
+                            <option value="">Selecionar...</option>
+                            {allDirigentes.map(p => (
+                              <option key={p.id} value={fullName(p)}>{fullName(p)}</option>
+                            ))}
+                          </select>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {groupInfo.schedule.map((row, index) => (
-                        <tr key={`${groupInfo.name}-${row.date}`} className="border-b border-slate-800">
-                          <td className="py-2 pr-2 text-white font-medium">{row.date}</td>
-                          <td className="py-2 pr-2">
-                            <input
-                              type="time"
-                              value={row.time}
-                              onChange={(e) => groupInfo.update(index, "time", e.target.value)}
-                              className="w-full px-2 py-1 text-sm bg-slate-800 border border-slate-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                          </td>
-                          <td className="py-2 pr-2">
-                            <select
-                              value={row.location}
-                              onChange={(e) => groupInfo.update(index, "location", e.target.value)}
-                              className="w-full px-2 py-1 text-sm bg-slate-800 border border-slate-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                              <option value="">Selecionar...</option>
-                              {publishers
-                                .filter(p => p.designations?.includes("Serviço de campo::Saída de campo"))
-                                .sort((a, b) => [a.firstName, a.middleName, a.lastName].filter(Boolean).join(' ').localeCompare([b.firstName, b.middleName, b.lastName].filter(Boolean).join(' ')))
-                                .map(p => (
-                                  <option key={p.id} value={[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}>
-                                    {[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}
-                                  </option>
-                                ))}
-                            </select>
-                          </td>
-                          <td className="py-2">
-                            <select
-                              value={row.leader}
-                              onChange={(e) => groupInfo.update(index, "leader", e.target.value)}
-                              className="w-full px-2 py-1 text-sm bg-slate-800 border border-slate-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                              <option value="">Selecionar...</option>
-                              {publishers
-                                .filter(p => p.designations?.includes("Serviço de campo::Dirigente de campo"))
-                                .sort((a, b) => [a.firstName, a.middleName, a.lastName].filter(Boolean).join(' ').localeCompare([b.firstName, b.middleName, b.lastName].filter(Boolean).join(' ')))
-                                .map(p => (
-                                  <option key={p.id} value={[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}>
-                                    {[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}
-                                  </option>
-                                ))}
-                            </select>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                    ))}
+                  </tbody>
+                </table>
+                {/* Cards mobile */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:hidden">
+                  {groupInfo.schedule.map((row, index) => (
+                    <div key={`${groupInfo.name}-${row.date}`} className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 space-y-2">
+                      <p className="text-xs font-bold text-white uppercase">{row.date}</p>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase">Horário</label>
+                        <input type="time" value={row.time} onChange={(e) => groupInfo.update(index, "time", e.target.value)} className={inputClass} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase">Local</label>
+                        <select value={row.location} onChange={(e) => groupInfo.update(index, "location", e.target.value)} className={selectClass}>
+                          <option value="">Selecionar...</option>
+                          {saidas.map(p => (
+                            <option key={p.id} value={fullName(p)}>{fullName(p)}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase">Dirigente</label>
+                        <select value={row.leader} onChange={(e) => groupInfo.update(index, "leader", e.target.value)} className={selectClass}>
+                          <option value="">Selecionar...</option>
+                          {allDirigentes.map(p => (
+                            <option key={p.id} value={fullName(p)}>{fullName(p)}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </CardContent>
         </Card>
       </div>

@@ -1,0 +1,128 @@
+{
+  "visitaHeader": {
+    "x": 10,
+    "y": 801,
+    "w": 393,
+    "fontFamily": "Arial, Helvetica, sans-serif"
+  },
+  "weekRange": {
+    "x": 418,
+    "y": 801,
+    "w": 167
+  },
+  "ministTheme2": {
+    "x": 10,
+    "y": 516,
+    "w": 161,
+    "color": "#d19403"
+  },
+  "ministNames0": {
+    "x": 181,
+    "y": 572,
+    "w": 400
+  },
+  "ministNames1": {
+    "x": 179,
+    "y": 543,
+    "w": 402
+  },
+  "ministNames2": {
+    "x": 179,
+    "y": 516,
+    "w": 402
+  },
+  "mwOpeningPrayer": {
+    "x": 280,
+    "y": 784,
+    "w": 291
+  },
+  "mwClosingPrayer": {
+    "x": 280,
+    "y": 760,
+    "w": 290
+  },
+  "ministTheme0": {
+    "color": "#c8901b"
+  },
+  "ministTheme1": {
+    "color": "#d48d01"
+  },
+  "mwMecInd1": {
+    "x": 11,
+    "y": 323,
+    "w": 291
+  },
+  "mwMecMic1": {
+    "x": 12,
+    "y": 292,
+    "w": 291
+  },
+  "mwMecAV": {
+    "x": 11,
+    "y": 263,
+    "w": 290
+  },
+  "mwMecInd2": {
+    "x": 331,
+    "y": 321,
+    "w": 249
+  },
+  "mwMecMic2": {
+    "x": 331,
+    "y": 293,
+    "w": 249
+  },
+  "mwMecPalco": {
+    "x": 331,
+    "y": 262,
+    "w": 248
+  },
+  "lifeTheme0": {
+    "x": 10,
+    "y": 419,
+    "w": 348,
+    "color": "#7d3d3e"
+  },
+  "weMecInd1": {
+    "x": 10,
+    "y": 81,
+    "w": 291
+  },
+  "weMecMic1": {
+    "x": 10,
+    "y": 59,
+    "w": 292
+  },
+  "weMecAV": {
+    "x": 11,
+    "y": 34,
+    "w": 290
+  },
+  "weMecInd2": {
+    "x": 331,
+    "y": 81,
+    "w": 250
+  },
+  "weMecMic2": {
+    "x": 331,
+    "y": 58,
+    "w": 249
+  },
+  "weMecPalco": {
+    "x": 331,
+    "y": 33,
+    "w": 249
+  },
+  "mwTalkTheme": {
+    "color": "#3a6869"
+  },
+  "mwGemsTheme": {
+    "color": "#15515d"
+  },
+  "mwBibleReadingRef": {
+    "color": "#4e6b6a"
+  },
+  "cbsLabel": {
+    "color": "#7d3d3e"
+  }
+}

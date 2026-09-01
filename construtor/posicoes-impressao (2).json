@@ -1,0 +1,338 @@
+{
+  "visitaHeader": {
+    "x": 10,
+    "y": 801,
+    "w": 393,
+    "fontFamily": "Arial, Helvetica, sans-serif"
+  },
+  "weekRange": {
+    "x": 418,
+    "y": 801,
+    "w": 167
+  },
+  "ministTheme2": {
+    "x": 10,
+    "y": 516,
+    "w": 161,
+    "color": "#d19403"
+  },
+  "ministNames0": {
+    "x": 181,
+    "y": 572,
+    "w": 400
+  },
+  "ministNames1": {
+    "x": 179,
+    "y": 543,
+    "w": 402
+  },
+  "ministNames2": {
+    "x": 179,
+    "y": 516,
+    "w": 402
+  },
+  "mwOpeningPrayer": {
+    "x": 279,
+    "y": 783,
+    "w": 84
+  },
+  "mwClosingPrayer": {
+    "x": 278,
+    "y": 761,
+    "w": 82
+  },
+  "ministTheme0": {
+    "color": "#c8901b"
+  },
+  "ministTheme1": {
+    "color": "#d48d01"
+  },
+  "mwMecInd1": {
+    "x": 11,
+    "y": 323,
+    "w": 71,
+    "color": "#274e13"
+  },
+  "mwMecMic1": {
+    "x": 12,
+    "y": 292,
+    "w": 70,
+    "color": "#274e13"
+  },
+  "mwMecAV": {
+    "x": 11,
+    "y": 263,
+    "w": 81,
+    "color": "#274e13"
+  },
+  "mwMecInd2": {
+    "x": 331,
+    "y": 321,
+    "w": 71,
+    "color": "#274e13"
+  },
+  "mwMecMic2": {
+    "x": 331,
+    "y": 293,
+    "w": 70,
+    "color": "#274e13"
+  },
+  "mwMecPalco": {
+    "x": 331,
+    "y": 262,
+    "w": 41,
+    "color": "#274e13"
+  },
+  "lifeTheme0": {
+    "x": 10,
+    "y": 419,
+    "w": 348,
+    "color": "#7d3d3e"
+  },
+  "weMecInd1": {
+    "x": 10,
+    "y": 81,
+    "w": 69,
+    "color": "#274e13"
+  },
+  "weMecMic1": {
+    "x": 10,
+    "y": 59,
+    "w": 70,
+    "color": "#274e13"
+  },
+  "weMecAV": {
+    "x": 11,
+    "y": 34,
+    "w": 85,
+    "color": "#274e13"
+  },
+  "weMecInd2": {
+    "x": 331,
+    "y": 81,
+    "w": 69,
+    "color": "#274e13"
+  },
+  "weMecMic2": {
+    "x": 331,
+    "y": 58,
+    "w": 71,
+    "color": "#284f14"
+  },
+  "weMecPalco": {
+    "x": 331,
+    "y": 33,
+    "w": 42,
+    "color": "#274e13"
+  },
+  "mwTalkTheme": {
+    "x": 10,
+    "y": 698,
+    "w": 88,
+    "color": "#3a6869"
+  },
+  "mwGemsTheme": {
+    "x": 11,
+    "y": 672,
+    "w": 65,
+    "color": "#15515d"
+  },
+  "mwBibleReadingRef": {
+    "x": 9,
+    "y": 645,
+    "w": 136,
+    "color": "#4e6b6a"
+  },
+  "cbsLabel": {
+    "color": "#7d3d3e"
+  },
+  "mwPresident": {
+    "x": 10,
+    "y": 782,
+    "w": 68
+  },
+  "mwPresidentNome": {
+    "x": 77,
+    "y": 783,
+    "w": 199
+  },
+  "mwOpeningPrayerNome": {
+    "x": 361,
+    "y": 782,
+    "w": 208
+  },
+  "mwClosingPrayerNome": {
+    "x": 360,
+    "y": 761,
+    "w": 210
+  },
+  "mwBibleReading": {
+    "x": 280,
+    "y": 646
+  },
+  "mwTalkSpeaker": {
+    "x": 280,
+    "y": 697
+  },
+  "weSuperTema": {
+    "x": 10,
+    "y": 365,
+    "w": 39,
+    "color": "#82484a"
+  },
+  "weSuperTemaVal": {
+    "x": 49,
+    "y": 365,
+    "w": 269
+  },
+  "weSuperNome": {
+    "x": 319,
+    "y": 365,
+    "w": 50,
+    "color": "#7d3d3e"
+  },
+  "weSuperNomeVal": {
+    "x": 368,
+    "y": 365,
+    "w": 219
+  },
+  "cbsLeitorNome": {
+    "x": 355,
+    "y": 383,
+    "w": 232
+  },
+  "mwMecInd2Nome": {
+    "x": 402,
+    "y": 321,
+    "w": 160
+  },
+  "mwMecMic2Nome": {
+    "x": 400,
+    "y": 293,
+    "w": 163
+  },
+  "mwMecPalcoNome": {
+    "x": 371,
+    "y": 262,
+    "w": 160
+  },
+  "wePresident": {
+    "x": 10,
+    "y": 197,
+    "w": 79,
+    "color": "#6e6e6e"
+  },
+  "wePresidentNome": {
+    "x": 88,
+    "y": 197,
+    "w": 199
+  },
+  "weOpeningPrayer": {
+    "x": 289,
+    "y": 198,
+    "w": 83,
+    "color": "#6e6e6e"
+  },
+  "weClosingPrayer": {
+    "x": 289,
+    "y": 183,
+    "w": 75,
+    "color": "#606060"
+  },
+  "weOpeningPrayerNome": {
+    "x": 371,
+    "y": 199,
+    "w": 215
+  },
+  "weClosingPrayerNome": {
+    "x": 370,
+    "y": 183,
+    "w": 215
+  },
+  "weTalkTheme": {
+    "x": 9,
+    "y": 163,
+    "w": 45,
+    "color": "#6e6e6e"
+  },
+  "weTalkThemeVal": {
+    "x": 52,
+    "y": 163,
+    "w": 309
+  },
+  "weTalkSpeaker": {
+    "x": 370,
+    "y": 163,
+    "w": 50,
+    "color": "#6e6e6e"
+  },
+  "weTalkSpeakerNome": {
+    "x": 419,
+    "y": 163,
+    "w": 164
+  },
+  "weSuperTema2": {
+    "x": 9,
+    "y": 123,
+    "w": 41,
+    "color": "#6e6e6e"
+  },
+  "weSuperTema2Val": {
+    "x": 50,
+    "y": 123,
+    "w": 321
+  },
+  "weSuperNome2": {
+    "x": 369,
+    "y": 123,
+    "w": 50,
+    "color": "#6e6e6e"
+  },
+  "weSuperNome2Val": {
+    "x": 419,
+    "y": 123,
+    "w": 162
+  },
+  "weMecInd1Nome": {
+    "x": 81,
+    "y": 80,
+    "w": 243
+  },
+  "weMecMic1Nome": {
+    "x": 79,
+    "y": 59,
+    "w": 244
+  },
+  "weMecAVNome": {
+    "x": 96,
+    "y": 33,
+    "w": 226
+  },
+  "weMecInd2Nome": {
+    "x": 401,
+    "y": 81,
+    "w": 188
+  },
+  "weMecMic2Nome": {
+    "x": 400,
+    "y": 58,
+    "w": 188
+  },
+  "weMecPalcoNome": {
+    "x": 372,
+    "y": 33,
+    "w": 214
+  },
+  "mwMecInd1Nome": {
+    "x": 81,
+    "y": 323
+  },
+  "mwMecMic1Nome": {
+    "x": 81,
+    "y": 291
+  },
+  "mwMecAVNome": {
+    "x": 91,
+    "y": 263
+  }
+}

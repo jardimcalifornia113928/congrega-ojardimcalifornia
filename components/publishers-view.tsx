@@ -449,7 +449,7 @@ export function PublishersView() {
                   >
                     <p className="font-bold text-white">{[p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ')}</p>
                     <p className="text-[10px] uppercase font-black text-[#64748B] tracking-widest mt-1">
-                      Grupo: {groups.find(g => g.id === p.groupId)?.name || "Não atribuído"}
+                      Grupo: {groups.find(g => g.id === p.groupId)?.name || "Sem Grupo"}
                     </p>
                   </button>
                 ))}
@@ -573,13 +573,14 @@ export function PublishersView() {
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black text-[#64748B] tracking-widest uppercase">Grupo de Campo</Label>
                       <Select 
-                        value={publisherData.groupId} 
-                        onValueChange={(val) => setPublisherData({ ...publisherData, groupId: val })}
+                        value={publisherData.groupId || "__none__"} 
+                        onValueChange={(val) => setPublisherData({ ...publisherData, groupId: val === "__none__" ? "" : val })}
                       >
                         <SelectTrigger className="h-12 bg-[#1E293B]/50 border-[#1E293B]/50 rounded-xl">
-                          <span>{groups.find(g => g.id === publisherData.groupId)?.name || "Selecione um grupo"}</span>
+                          <span>{publisherData.groupId ? groups.find(g => g.id === publisherData.groupId)?.name || "Selecione um grupo" : "Sem Grupo"}</span>
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="__none__">Sem Grupo</SelectItem>
                           {groups.map((group) => (
                             <SelectItem key={group.id} value={group.id}>{group.name}</SelectItem>
                           ))}
