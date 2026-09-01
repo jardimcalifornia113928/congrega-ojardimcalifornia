@@ -314,7 +314,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
       const allReports = new Map<string, Record<string, any>>();
       const snaps = await Promise.all(allMonthIds.map(id => getDoc(doc(db, 'field_reports', id))));
       for (let i = 0; i < allMonthIds.length; i++) {
-        allReports.set(allMonthIds[i], snaps[i].exists() ? (snaps[i].data().reports || {}) : {});
+        allReports.set(allMonthIds[i], snaps[i].exists() ? (snaps[i].data()?.reports || {}) : {});
       }
 
       // Fetch all attendance in parallel
