@@ -498,7 +498,7 @@ export function ServiceView({ onDirtyChange }: ServiceViewProps) {
     .sort((a, b) => fullName(a).localeCompare(fullName(b)));
 
   return (
-    <div className="space-y-6 h-full overflow-auto pb-6">
+    <div className="h-full overflow-auto pb-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h1 className="text-2xl font-bold text-gray-900">Serviço de Campo</h1>
@@ -529,10 +529,10 @@ export function ServiceView({ onDirtyChange }: ServiceViewProps) {
         </select>
       </div>
 
-      <div className="flex flex-col gap-6">
+      <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory">
 
         {/* ============ DESIGNAÇÃO SEMANA ============ */}
-        <Card className="bg-slate-900 border-slate-700/50 shadow-sm rounded-3xl overflow-hidden">
+        <Card className="bg-slate-900 border-slate-700/50 shadow-sm rounded-3xl overflow-hidden min-w-[85vw] sm:min-w-[480px] flex-shrink-0 snap-start">
           <CardHeader className="px-4 py-3 bg-slate-800/30 border-b border-slate-700/50">
             <CardTitle className="text-sm font-bold text-white uppercase tracking-wider">Designação Semana</CardTitle>
           </CardHeader>
@@ -614,7 +614,7 @@ export function ServiceView({ onDirtyChange }: ServiceViewProps) {
         </Card>
 
         {/* ============ DESIGNAÇÃO SÁBADO ============ */}
-        <Card className="bg-slate-900 border-slate-700/50 shadow-sm rounded-3xl overflow-hidden">
+        <Card className="bg-slate-900 border-slate-700/50 shadow-sm rounded-3xl overflow-hidden min-w-[85vw] sm:min-w-[480px] flex-shrink-0 snap-start">
           <CardHeader className="px-4 py-3 bg-slate-800/30 border-b border-slate-700/50">
             <CardTitle className="text-sm font-bold text-white uppercase tracking-wider">Designação Sábado</CardTitle>
           </CardHeader>
@@ -696,7 +696,7 @@ export function ServiceView({ onDirtyChange }: ServiceViewProps) {
         </Card>
 
         {/* ============ DESIGNAÇÃO DOMINGO ============ */}
-        <Card className="bg-slate-900 border-slate-700/50 shadow-sm rounded-3xl overflow-hidden">
+        <Card className="bg-slate-900 border-slate-700/50 shadow-sm rounded-3xl overflow-hidden min-w-[85vw] sm:min-w-[480px] flex-shrink-0 snap-start">
           <CardHeader className="px-4 py-3 bg-slate-800/30 border-b border-slate-700/50">
             <CardTitle className="text-sm font-bold text-white uppercase tracking-wider">Designação Domingo</CardTitle>
           </CardHeader>

@@ -82,7 +82,9 @@ function formatDate(iso: string): string {
   if (!iso) return '';
   const [y, m, d] = iso.split('-');
   if (!y || !m || !d) return iso;
-  return `${d}/${m}/${y}`;
+  const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+  const days = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+  return `${d}/${m}/${y} - ${days[date.getDay()]}`;
 }
 
 function monthKey(dateStr: string): string {
