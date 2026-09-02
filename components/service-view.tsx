@@ -529,59 +529,14 @@ export function ServiceView({ onDirtyChange }: ServiceViewProps) {
         </select>
       </div>
 
-      <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory">
-
-        {/* ============ DESIGNAÇÃO SEMANA ============ */}
+      {/* Mobile: scroll horizontal */}
+      <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory md:hidden">
         <Card className="bg-slate-900 border-slate-700/50 shadow-sm rounded-3xl overflow-hidden min-w-[85vw] sm:min-w-[480px] flex-shrink-0 snap-start">
           <CardHeader className="px-4 py-3 bg-slate-800/30 border-b border-slate-700/50">
             <CardTitle className="text-sm font-bold text-white uppercase tracking-wider">Designação Semana</CardTitle>
           </CardHeader>
           <CardContent className="p-4">
-            {/* Tabela desktop */}
-            <table className="w-full text-sm table-fixed hidden md:table">
-              <colgroup>
-                <col className="w-28" />
-                <col className="w-24" />
-                <col className="w-1/3" />
-                <col className="w-1/3" />
-              </colgroup>
-              <thead>
-                <tr className="border-b border-slate-700">
-                  <th className="text-left text-xs font-medium text-slate-400 pb-2 pr-2">Dia</th>
-                  <th className="text-left text-xs font-medium text-slate-400 pb-2 pr-2">Horário</th>
-                  <th className="text-left text-xs font-medium text-slate-400 pb-2 pr-2">Local</th>
-                  <th className="text-left text-xs font-medium text-slate-400 pb-2">Dirigente</th>
-                </tr>
-              </thead>
-              <tbody>
-                {weekSchedule.map((row, index) => (
-                  <tr key={row.day} className="border-b border-slate-800">
-                    <td className="py-2 pr-2 text-white font-medium">{row.day}</td>
-                    <td className="py-2 pr-2">
-                      <input type="time" value={row.time} onChange={(e) => updateWeekSchedule(index, "time", e.target.value)} className={inputClass} />
-                    </td>
-                    <td className="py-2 pr-2">
-                      <select value={row.location} onChange={(e) => updateWeekSchedule(index, "location", e.target.value)} className={selectClass}>
-                        <option value="">Selecionar...</option>
-                        {saidas.map(p => (
-                          <option key={p.id} value={fullName(p)}>{fullName(p)}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="py-2">
-                      <select value={row.leader} onChange={(e) => updateWeekSchedule(index, "leader", e.target.value)} className={selectClass}>
-                        <option value="">Selecionar...</option>
-                        {allDirigentes.map(p => (
-                          <option key={p.id} value={fullName(p)}>{fullName(p)}</option>
-                        ))}
-                      </select>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {/* Cards mobile */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:hidden">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {weekSchedule.map((row, index) => (
                 <div key={row.day} className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 space-y-2">
                   <p className="text-xs font-bold text-white uppercase">{row.day}</p>
@@ -593,18 +548,14 @@ export function ServiceView({ onDirtyChange }: ServiceViewProps) {
                     <label className="text-[10px] font-bold text-slate-400 uppercase">Local</label>
                     <select value={row.location} onChange={(e) => updateWeekSchedule(index, "location", e.target.value)} className={selectClass}>
                       <option value="">Selecionar...</option>
-                      {saidas.map(p => (
-                        <option key={p.id} value={fullName(p)}>{fullName(p)}</option>
-                      ))}
+                      {saidas.map(p => (<option key={p.id} value={fullName(p)}>{fullName(p)}</option>))}
                     </select>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-slate-400 uppercase">Dirigente</label>
                     <select value={row.leader} onChange={(e) => updateWeekSchedule(index, "leader", e.target.value)} className={selectClass}>
                       <option value="">Selecionar...</option>
-                      {allDirigentes.map(p => (
-                        <option key={p.id} value={fullName(p)}>{fullName(p)}</option>
-                      ))}
+                      {allDirigentes.map(p => (<option key={p.id} value={fullName(p)}>{fullName(p)}</option>))}
                     </select>
                   </div>
                 </div>
@@ -613,57 +564,12 @@ export function ServiceView({ onDirtyChange }: ServiceViewProps) {
           </CardContent>
         </Card>
 
-        {/* ============ DESIGNAÇÃO SÁBADO ============ */}
         <Card className="bg-slate-900 border-slate-700/50 shadow-sm rounded-3xl overflow-hidden min-w-[85vw] sm:min-w-[480px] flex-shrink-0 snap-start">
           <CardHeader className="px-4 py-3 bg-slate-800/30 border-b border-slate-700/50">
             <CardTitle className="text-sm font-bold text-white uppercase tracking-wider">Designação Sábado</CardTitle>
           </CardHeader>
           <CardContent className="p-4">
-            {/* Tabela desktop */}
-            <table className="w-full text-sm table-fixed hidden md:table">
-              <colgroup>
-                <col className="w-28" />
-                <col className="w-24" />
-                <col className="w-1/3" />
-                <col className="w-1/3" />
-              </colgroup>
-              <thead>
-                <tr className="border-b border-slate-700">
-                  <th className="text-left text-xs font-medium text-slate-400 pb-2 pr-2">Data</th>
-                  <th className="text-left text-xs font-medium text-slate-400 pb-2 pr-2">Horário</th>
-                  <th className="text-left text-xs font-medium text-slate-400 pb-2 pr-2">Local</th>
-                  <th className="text-left text-xs font-medium text-slate-400 pb-2">Dirigente</th>
-                </tr>
-              </thead>
-              <tbody>
-                {saturdaySchedule.map((row, index) => (
-                  <tr key={row.date} className="border-b border-slate-800">
-                    <td className="py-2 pr-2 text-white font-medium">{row.date}</td>
-                    <td className="py-2 pr-2">
-                      <input type="time" value={row.time} onChange={(e) => updateSaturdaySchedule(index, "time", e.target.value)} className={inputClass} />
-                    </td>
-                    <td className="py-2 pr-2">
-                      <select value={row.location} onChange={(e) => updateSaturdaySchedule(index, "location", e.target.value)} className={selectClass}>
-                        <option value="">Selecionar...</option>
-                        {saidas.map(p => (
-                          <option key={p.id} value={fullName(p)}>{fullName(p)}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="py-2">
-                      <select value={row.leader} onChange={(e) => updateSaturdaySchedule(index, "leader", e.target.value)} className={selectClass}>
-                        <option value="">Selecionar...</option>
-                        {allDirigentes.map(p => (
-                          <option key={p.id} value={fullName(p)}>{fullName(p)}</option>
-                        ))}
-                      </select>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {/* Cards mobile */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:hidden">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {saturdaySchedule.map((row, index) => (
                 <div key={row.date} className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 space-y-2">
                   <p className="text-xs font-bold text-white uppercase">{row.date}</p>
@@ -675,18 +581,14 @@ export function ServiceView({ onDirtyChange }: ServiceViewProps) {
                     <label className="text-[10px] font-bold text-slate-400 uppercase">Local</label>
                     <select value={row.location} onChange={(e) => updateSaturdaySchedule(index, "location", e.target.value)} className={selectClass}>
                       <option value="">Selecionar...</option>
-                      {saidas.map(p => (
-                        <option key={p.id} value={fullName(p)}>{fullName(p)}</option>
-                      ))}
+                      {saidas.map(p => (<option key={p.id} value={fullName(p)}>{fullName(p)}</option>))}
                     </select>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-slate-400 uppercase">Dirigente</label>
                     <select value={row.leader} onChange={(e) => updateSaturdaySchedule(index, "leader", e.target.value)} className={selectClass}>
                       <option value="">Selecionar...</option>
-                      {allDirigentes.map(p => (
-                        <option key={p.id} value={fullName(p)}>{fullName(p)}</option>
-                      ))}
+                      {allDirigentes.map(p => (<option key={p.id} value={fullName(p)}>{fullName(p)}</option>))}
                     </select>
                   </div>
                 </div>
@@ -695,65 +597,15 @@ export function ServiceView({ onDirtyChange }: ServiceViewProps) {
           </CardContent>
         </Card>
 
-        {/* ============ DESIGNAÇÃO DOMINGO ============ */}
         <Card className="bg-slate-900 border-slate-700/50 shadow-sm rounded-3xl overflow-hidden min-w-[85vw] sm:min-w-[480px] flex-shrink-0 snap-start">
           <CardHeader className="px-4 py-3 bg-slate-800/30 border-b border-slate-700/50">
             <CardTitle className="text-sm font-bold text-white uppercase tracking-wider">Designação Domingo</CardTitle>
           </CardHeader>
           <CardContent className="p-4 space-y-6">
-            {[
-              { name: "Lontras", subtitle: "Macaco", schedule: sundayLontras, update: updateSundayLontras },
-              { name: "Praia", subtitle: "Raposa", schedule: sundayPraia, update: updateSundayPraia }
-            ].map(groupInfo => (
+            {[{ name: "Lontras", subtitle: "Macaco", schedule: sundayLontras, update: updateSundayLontras }, { name: "Praia", subtitle: "Raposa", schedule: sundayPraia, update: updateSundayPraia }].map(groupInfo => (
               <div key={groupInfo.name} className="space-y-3">
-                <h3 className="text-sm font-bold text-[#0EA5E9] uppercase tracking-wider">
-                  {groupInfo.name} - {groupInfo.subtitle}
-                </h3>
-                {/* Tabela desktop */}
-                <table className="w-full text-sm table-fixed hidden md:table">
-                  <colgroup>
-                    <col className="w-28" />
-                    <col className="w-24" />
-                    <col className="w-1/3" />
-                    <col className="w-1/3" />
-                  </colgroup>
-                  <thead>
-                    <tr className="border-b border-slate-700">
-                      <th className="text-left text-xs font-medium text-slate-400 pb-2 pr-2">Data</th>
-                      <th className="text-left text-xs font-medium text-slate-400 pb-2 pr-2">Horário</th>
-                      <th className="text-left text-xs font-medium text-slate-400 pb-2 pr-2">Local</th>
-                      <th className="text-left text-xs font-medium text-slate-400 pb-2">Dirigente</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {groupInfo.schedule.map((row, index) => (
-                      <tr key={`${groupInfo.name}-${row.date}`} className="border-b border-slate-800">
-                        <td className="py-2 pr-2 text-white font-medium">{row.date}</td>
-                        <td className="py-2 pr-2">
-                          <input type="time" value={row.time} onChange={(e) => groupInfo.update(index, "time", e.target.value)} className={inputClass} />
-                        </td>
-                        <td className="py-2 pr-2">
-                          <select value={row.location} onChange={(e) => groupInfo.update(index, "location", e.target.value)} className={selectClass}>
-                            <option value="">Selecionar...</option>
-                            {saidas.map(p => (
-                              <option key={p.id} value={fullName(p)}>{fullName(p)}</option>
-                            ))}
-                          </select>
-                        </td>
-                        <td className="py-2">
-                          <select value={row.leader} onChange={(e) => groupInfo.update(index, "leader", e.target.value)} className={selectClass}>
-                            <option value="">Selecionar...</option>
-                            {allDirigentes.map(p => (
-                              <option key={p.id} value={fullName(p)}>{fullName(p)}</option>
-                            ))}
-                          </select>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {/* Cards mobile */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:hidden">
+                <h3 className="text-sm font-bold text-[#0EA5E9] uppercase tracking-wider">{groupInfo.name} - {groupInfo.subtitle}</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {groupInfo.schedule.map((row, index) => (
                     <div key={`${groupInfo.name}-${row.date}`} className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3 space-y-2">
                       <p className="text-xs font-bold text-white uppercase">{row.date}</p>
@@ -765,23 +617,108 @@ export function ServiceView({ onDirtyChange }: ServiceViewProps) {
                         <label className="text-[10px] font-bold text-slate-400 uppercase">Local</label>
                         <select value={row.location} onChange={(e) => groupInfo.update(index, "location", e.target.value)} className={selectClass}>
                           <option value="">Selecionar...</option>
-                          {saidas.map(p => (
-                            <option key={p.id} value={fullName(p)}>{fullName(p)}</option>
-                          ))}
+                          {saidas.map(p => (<option key={p.id} value={fullName(p)}>{fullName(p)}</option>))}
                         </select>
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-[10px] font-bold text-slate-400 uppercase">Dirigente</label>
                         <select value={row.leader} onChange={(e) => groupInfo.update(index, "leader", e.target.value)} className={selectClass}>
                           <option value="">Selecionar...</option>
-                          {allDirigentes.map(p => (
-                            <option key={p.id} value={fullName(p)}>{fullName(p)}</option>
-                          ))}
+                          {allDirigentes.map(p => (<option key={p.id} value={fullName(p)}>{fullName(p)}</option>))}
                         </select>
                       </div>
                     </div>
                   ))}
                 </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Desktop: empilhado */}
+      <div className="hidden md:flex md:flex-col md:gap-4">
+        <Card className="bg-slate-900 border-slate-700/50 shadow-sm rounded-3xl overflow-hidden">
+          <CardHeader className="px-4 py-3 bg-slate-800/30 border-b border-slate-700/50">
+            <CardTitle className="text-sm font-bold text-white uppercase tracking-wider">Designação Semana</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <table className="w-full text-sm table-fixed">
+              <colgroup><col className="w-28" /><col className="w-24" /><col className="w-1/3" /><col className="w-1/3" /></colgroup>
+              <thead><tr className="border-b border-slate-700">
+                <th className="text-left text-xs font-medium text-slate-400 pb-2 pr-2">Dia</th>
+                <th className="text-left text-xs font-medium text-slate-400 pb-2 pr-2">Horário</th>
+                <th className="text-left text-xs font-medium text-slate-400 pb-2 pr-2">Local</th>
+                <th className="text-left text-xs font-medium text-slate-400 pb-2">Dirigente</th>
+              </tr></thead>
+              <tbody>
+                {weekSchedule.map((row, index) => (
+                  <tr key={row.day} className="border-b border-slate-800">
+                    <td className="py-2 pr-2 text-white font-medium">{row.day}</td>
+                    <td className="py-2 pr-2"><input type="time" value={row.time} onChange={(e) => updateWeekSchedule(index, "time", e.target.value)} className={inputClass} /></td>
+                    <td className="py-2 pr-2"><select value={row.location} onChange={(e) => updateWeekSchedule(index, "location", e.target.value)} className={selectClass}><option value="">Selecionar...</option>{saidas.map(p => (<option key={p.id} value={fullName(p)}>{fullName(p)}</option>))}</select></td>
+                    <td className="py-2"><select value={row.leader} onChange={(e) => updateWeekSchedule(index, "leader", e.target.value)} className={selectClass}><option value="">Selecionar...</option>{allDirigentes.map(p => (<option key={p.id} value={fullName(p)}>{fullName(p)}</option>))}</select></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-slate-900 border-slate-700/50 shadow-sm rounded-3xl overflow-hidden">
+          <CardHeader className="px-4 py-3 bg-slate-800/30 border-b border-slate-700/50">
+            <CardTitle className="text-sm font-bold text-white uppercase tracking-wider">Designação Sábado</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <table className="w-full text-sm table-fixed">
+              <colgroup><col className="w-28" /><col className="w-24" /><col className="w-1/3" /><col className="w-1/3" /></colgroup>
+              <thead><tr className="border-b border-slate-700">
+                <th className="text-left text-xs font-medium text-slate-400 pb-2 pr-2">Data</th>
+                <th className="text-left text-xs font-medium text-slate-400 pb-2 pr-2">Horário</th>
+                <th className="text-left text-xs font-medium text-slate-400 pb-2 pr-2">Local</th>
+                <th className="text-left text-xs font-medium text-slate-400 pb-2">Dirigente</th>
+              </tr></thead>
+              <tbody>
+                {saturdaySchedule.map((row, index) => (
+                  <tr key={row.date} className="border-b border-slate-800">
+                    <td className="py-2 pr-2 text-white font-medium">{row.date}</td>
+                    <td className="py-2 pr-2"><input type="time" value={row.time} onChange={(e) => updateSaturdaySchedule(index, "time", e.target.value)} className={inputClass} /></td>
+                    <td className="py-2 pr-2"><select value={row.location} onChange={(e) => updateSaturdaySchedule(index, "location", e.target.value)} className={selectClass}><option value="">Selecionar...</option>{saidas.map(p => (<option key={p.id} value={fullName(p)}>{fullName(p)}</option>))}</select></td>
+                    <td className="py-2"><select value={row.leader} onChange={(e) => updateSaturdaySchedule(index, "leader", e.target.value)} className={selectClass}><option value="">Selecionar...</option>{allDirigentes.map(p => (<option key={p.id} value={fullName(p)}>{fullName(p)}</option>))}</select></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-slate-900 border-slate-700/50 shadow-sm rounded-3xl overflow-hidden">
+          <CardHeader className="px-4 py-3 bg-slate-800/30 border-b border-slate-700/50">
+            <CardTitle className="text-sm font-bold text-white uppercase tracking-wider">Designação Domingo</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 space-y-6">
+            {[{ name: "Lontras", subtitle: "Macaco", schedule: sundayLontras, update: updateSundayLontras }, { name: "Praia", subtitle: "Raposa", schedule: sundayPraia, update: updateSundayPraia }].map(groupInfo => (
+              <div key={groupInfo.name} className="space-y-3">
+                <h3 className="text-sm font-bold text-[#0EA5E9] uppercase tracking-wider">{groupInfo.name} - {groupInfo.subtitle}</h3>
+                <table className="w-full text-sm table-fixed">
+                  <colgroup><col className="w-28" /><col className="w-24" /><col className="w-1/3" /><col className="w-1/3" /></colgroup>
+                  <thead><tr className="border-b border-slate-700">
+                    <th className="text-left text-xs font-medium text-slate-400 pb-2 pr-2">Data</th>
+                    <th className="text-left text-xs font-medium text-slate-400 pb-2 pr-2">Horário</th>
+                    <th className="text-left text-xs font-medium text-slate-400 pb-2 pr-2">Local</th>
+                    <th className="text-left text-xs font-medium text-slate-400 pb-2">Dirigente</th>
+                  </tr></thead>
+                  <tbody>
+                    {groupInfo.schedule.map((row, index) => (
+                      <tr key={`${groupInfo.name}-${row.date}`} className="border-b border-slate-800">
+                        <td className="py-2 pr-2 text-white font-medium">{row.date}</td>
+                        <td className="py-2 pr-2"><input type="time" value={row.time} onChange={(e) => groupInfo.update(index, "time", e.target.value)} className={inputClass} /></td>
+                        <td className="py-2 pr-2"><select value={row.location} onChange={(e) => groupInfo.update(index, "location", e.target.value)} className={selectClass}><option value="">Selecionar...</option>{saidas.map(p => (<option key={p.id} value={fullName(p)}>{fullName(p)}</option>))}</select></td>
+                        <td className="py-2"><select value={row.leader} onChange={(e) => groupInfo.update(index, "leader", e.target.value)} className={selectClass}><option value="">Selecionar...</option>{allDirigentes.map(p => (<option key={p.id} value={fullName(p)}>{fullName(p)}</option>))}</select></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             ))}
           </CardContent>
