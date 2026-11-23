@@ -133,6 +133,111 @@ export interface Territory {
   updatedAt?: string;
 }
 
+// ===== Arranjo de Ônibus =====
+
+export type BusPaymentMethod = 'dinheiro' | 'pix' | 'transferencia' | 'cartao';
+
+/** Marca de cancelamento (recibo não é apagado, é cancelado) */
+export interface BusCancelMark {
+  at: string;
+  reason: string;
+  byName: string;
+}
+
+/** Recebimento de um participante (série PAG) */
+export interface BusPayment {
+  id: string;
+  date: string;
+  amount: number;
+  method: BusPaymentMethod;
+  receiptNo: string;
+  authCode: string;
+  receivedById: string;
+  receivedByName: string;
+  canceled?: BusCancelMark;
+}
+
+/** Devolução de valor a um participante que desistiu (série DEV) */
+export interface BusRefund {
+  id: string;
+  date: string;
+  amount: number;
+  fromId: string;
+  fromName: string;
+  receiptNo: string;
+  authCode: string;
+  note?: string;
+}
+
+export interface BusParticipant {
+  id: string;
+  publisherId?: string;
+  name: string;
+  groupName?: string;
+  phone?: string;
+  /** Valor próprio (criança, casal, irmão com desconto). Sem isso, usa o valor do assento. */
+  customShare?: number;
+  status: 'ativo' | 'desistente';
+  /** Desistiu e deixou o valor no caixa (não pediu devolução) */
+  retained?: boolean;
+  joinedAt: string;
+  payments: BusPayment[];
+  refunds?: BusRefund[];
+}
+
+/** Repasse integral do dinheiro em mãos (série REP) — a "sangria" */
+export interface BusTransfer {
+  id: string;
+  date: string;
+  amount: number;
+  fromId: string;
+  fromName: string;
+  toId: string;
+  toName: string;
+  receiptNo: string;
+  authCode: string;
+  coveredPayments: string[];
+}
+
+export interface BusArrangement {
+  id: string;
+  title: string;
+  /** Tipo do evento: assembleia = 1 dia de lista, congresso = 3 dias */
+  eventType?: 'assembleia' | 'congresso';
+  date: string;
+  seats: number;
+  busTotal: number;
+  seatPrice: number;
+  status: 'aberto' | 'fechado' | 'concluido';
+  /** Os 2 responsáveis (uids) que podem alterar */
+  managers: string[];
+  collectorId?: string;
+  collectorName?: string;
+  depositorId?: string;
+  depositorName?: string;
+  participants: BusParticipant[];
+  transfers: BusTransfer[];
+  /** Sequenciais por série: PAG, REP, DEP, DEV */
+  counters?: Record<string, number>;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/** Depósito no banco (série DEP). A foto do comprovante fica em subcoleção. */
+export interface BusDeposit {
+  id: string;
+  arrangementId: string;
+  date: string;
+  amount: number;
+  byId: string;
+  byName: string;
+  bankRef: string;
+  receiptNo: string;
+  authCode: string;
+  hasPhoto?: boolean;
+  createdAt?: string;
+}
+
 export interface CongregationSettings {
   congregationName: string;
   address: string;

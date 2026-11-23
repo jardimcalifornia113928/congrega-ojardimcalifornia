@@ -14,7 +14,8 @@ import {
   Shield,
   Briefcase,
   ClipboardList,
-  Map
+  Map,
+  Bus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/components/auth-provider';
@@ -49,6 +50,7 @@ export function Sidebar({ activeTab, onNavigate, isMobileOpen, onMobileClose }: 
       { id: 'service', label: 'Serviço de Campo', icon: Briefcase },
       { id: 'territories', label: 'Territórios', icon: Map },
       { id: 'public_witness', label: 'Testemunho Público', icon: ClipboardList },
+      { id: 'bus', label: 'Arranjo de Ônibus', icon: Bus },
       { id: 'prints', label: 'Impressões', icon: Printer },
       { id: 'cleaning', label: 'Limpeza', icon: Calendar },
     ]},

@@ -2,12 +2,17 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Admin tem acesso total (por role no Firestore ou email absoluto)
+    // Admin tem acesso total (por role/permissions no Firestore ou email absoluto)
     function isAdmin() {
       return request.auth != null && (
         request.auth.token.email == 'mariomarciofranco@gmail.com' ||
         request.auth.token.email == 'jardimcalifornia@gmail.com' ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') == 'admin' ||
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('permissions', {}).get('admin', false) == true
+          )
+        )
       );
     }
 
@@ -82,6 +87,38 @@ service cloud.firestore {
     match /settings/{docId} {
       allow read: if isAuth();
       allow write: if isAdmin() || isOwner(docId);
+    }
+
+    // === ARRANJO DE ÔNIBUS ===
+
+    // Responsável pelo arranjo (um dos 2 managers) ou admin
+    function isBusManager(arrangementId) {
+      return isAuth() && (
+        isAdmin() ||
+        request.auth.uid in get(/databases/$(database)/documents/bus_arrangements/$(arrangementId)).data.managers
+      );
+    }
+
+    // Registro do arranjo: todos veem, só os 2 responsáveis alteram
+    match /bus_arrangements/{docId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update: if isAdmin() || (isAuth() && request.auth.uid in resource.data.managers);
+      allow delete: if isAdmin();
+    }
+
+    // Depósitos e comprovantes bancários
+    match /bus_deposits/{docId} {
+      allow read: if isAuth();
+      allow create: if isBusManager(request.resource.data.arrangementId);
+      allow update, delete: if isBusManager(resource.data.arrangementId);
+
+      // Foto do comprovante (subcoleção, fora do documento principal por causa do limite de 1 MB)
+      match /photo/{photoId} {
+        allow read: if isAuth();
+        allow create, update: if isBusManager(get(/databases/$(database)/documents/bus_deposits/$(docId)).data.arrangementId);
+        allow delete: if isBusManager(get(/databases/$(database)/documents/bus_deposits/$(docId)).data.arrangementId);
+      }
     }
   }
 }

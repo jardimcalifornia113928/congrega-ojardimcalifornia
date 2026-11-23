@@ -44,12 +44,16 @@ export function SettingsView() {
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
 
-  const COLLECTIONS = ['publishers', 'groups', 'midweek_meetings', 'weekend_meetings', 'attendance', 'field_reports', 'users', 'public_witness'];
+  const COLLECTIONS = [
+    'publishers', 'groups', 'midweek_meetings', 'weekend_meetings', 'attendance',
+    'field_reports', 'users', 'public_witness', 'bus_arrangements', 'bus_deposits',
+    'settings', 'territories',
+  ];
 
   const SETTINGS_DOC_ID = user ? `congregation_${user.uid}` : null;
 
@@ -83,7 +87,7 @@ export function SettingsView() {
   };
 
   const handleBackup = async () => {
-    if (!user) return;
+    if (!user || !isAdmin) return;
     setIsBackingUp(true);
     const toastId = toast.loading("Coletando dados do Firestore...");
     try {
@@ -118,6 +122,12 @@ export function SettingsView() {
 
   const handleRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    // Esconder o botão não basta: a ação também é validada aqui.
+    if (!isAdmin) {
+      toast.error('Somente administradores podem restaurar backups.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
     if (!file || !user) return;
     setIsRestoring(true);
     const toastId = toast.loading("Restaurando dados...");
@@ -405,7 +415,8 @@ export function SettingsView() {
           </CardContent>
         </Card>
 
-        {/* Card: Base de Dados */}
+        {/* Card: Base de Dados — o backup inclui `users`, por isso é só admin */}
+        {isAdmin && (
         <Card className="border-[#1E293B] shadow-sm rounded-2xl overflow-hidden">
           <CardHeader className="bg-[#1E293B]/30 border-b border-[#1E293B]/50 p-5">
             <div className="flex items-center gap-2.5">
@@ -429,7 +440,7 @@ export function SettingsView() {
             />
             <Button
               onClick={handleBackup}
-              disabled={isBackingUp}
+              disabled={isBackingUp || !isAdmin}
               variant="outline"
               className="w-full h-9 border-[#1E293B] text-[#94A3B8] font-bold rounded-lg gap-2 text-[10px] disabled:opacity-50"
             >
@@ -438,7 +449,7 @@ export function SettingsView() {
             </Button>
             <Button
               onClick={() => fileInputRef.current?.click()}
-              disabled={isRestoring}
+              disabled={isRestoring || !isAdmin}
               variant="outline"
               className="w-full h-9 border-[#1E293B] text-[#94A3B8] font-bold rounded-lg gap-2 text-[10px] disabled:opacity-50"
             >
@@ -447,6 +458,7 @@ export function SettingsView() {
             </Button>
           </CardContent>
         </Card>
+        )}
 
       </div>
     </div>

@@ -307,8 +307,10 @@ export function PublishersView() {
         const docId = `${sm.year}-${String(sm.month + 1).padStart(2, '0')}`;
         const entry = s21Data[docId];
         if (!entry) return;
+        // Merge do Firestore é only-first-level: gravar `reports` inteiro
+        // apagaria os registros dos outros publicadores do mesmo mês.
         await setDoc(doc(db, 'field_reports', docId), {
-          reports: { [selectedPublisherId]: entry },
+          [`reports.${selectedPublisherId}`]: entry,
           month: sm.month,
           year: sm.year,
           updatedAt: new Date().toISOString(),
@@ -333,7 +335,12 @@ export function PublishersView() {
           <p className="text-[#94A3B8] font-bold">Gestão completa do corpo de publicadores.</p>
         </div>
         <div className="flex gap-4">
-          <Button variant="outline" className="border-[#1E293B] text-[#94A3B8] font-bold h-12 rounded-xl gap-2 px-6">
+          <Button
+            disabled
+            title="Em breve"
+            variant="outline"
+            className="border-[#1E293B] text-[#94A3B8] font-bold h-12 rounded-xl gap-2 px-6 disabled:opacity-50"
+          >
             Relatórios em Lote
           </Button>
           <Button 
@@ -666,6 +673,7 @@ export function PublishersView() {
                         { title: "Fim de semana", items: ["Orador local", "Orador fora", "Presidente", "Oração inicial", "Dirigente A Sentinela", "Leitor", "Oração final"] },
                         { title: "Serviço de campo", items: ["Saída de campo", "Testemunho público", "Dirigente de campo", "Super. de Grupo", "Aux. Super. de Grupo"] },
                         { title: "Designação Mecânica", items: ["Indicador", "Microfones", "Som", "Palco"] },
+                        { title: "Arranjo de ônibus", items: ["Super. de ônibus", "Assistente", "Capitão"] },
                       ].map((sec) => (
                         <Card key={sec.title} className="bg-[#0F172A] border-[#1E293B]/50 shadow-sm rounded-3xl overflow-hidden group hover:border-[#0EA5E9]/30 transition-all">
                           <div className="px-4 py-3 bg-[#1E293B]/30 border-b border-[#1E293B]/50">

@@ -1,50 +1,63 @@
 # Pendências — Correções Futuras
 
-## 🔴 Críticos
+Atualizado em 23/11/2026 após revisão geral do app.
 
-### 1. Firestore sem segurança (`firestore.rules:4-6`)
-**Problema:** `match /{document=**}` permite qualquer usuário autenticado ler/escrever tudo.
-**Correção:** Implementar regras granulares por coleção com verificação de `ownerId` e `role`.
+## Corrigidos nesta sessão
 
-### 2. Admin detectado por substring de email (`users-view.tsx:70`)
-**Problema:** `user?.email?.includes('jardimcalifornia')` — inseguro.
-**Correção:** Usar campo `role` booleano no documento do Firestore.
+- [x] **S-21 apagava outros publicadores** (`publishers-view.tsx`) — a gravação
+  agora usa `reports.<idDoPublicador>` com `{ merge: true }`. O merge do
+  Firestore é só no primeiro nível; gravar `reports: { [id]: entry }`
+  substituía o mapa inteiro do mês.
+- [x] **Permissão "Admin" não funcionava** (`auth-provider.tsx`,
+  `users-view.tsx`, `firestore.rules`) — `isAdmin` aceita `permissions.admin`;
+  alternar Admin grava `permissions.admin` e `role` juntos; `isAdmin()` das
+  regras usa `get(...)` com `exists()` e `.get()` para campos ausentes.
+- [x] **Backup/restore irrestrito e incompleto** (`settings-view.tsx`) — cartão
+  e botões só para admin, validação de `isAdmin` dentro de `handleBackup` e
+  `handleRestore`, e `COLLECTIONS` ampliada com `bus_arrangements`,
+  `bus_deposits`, `settings` e `territories`.
+- [x] **Sequencial de recibo sem transação** (`bus-arrangement-view.tsx`) —
+  `reserveReceiptNo` usa `runTransaction` sobre o documento do arranjo; os
+  patches seguintes não gravam mais `counters`.
+- [x] **Devolução com saldo insuficiente** (`bus-arrangement-view.tsx`) —
+  removido o fallback `hands[0]`; a devolução exige um portador com saldo >=
+  valor devido.
+- [x] **Botão "Relatórios em Lote" sem ação** (`publishers-view.tsx`) —
+  desabilitado com `title="Em breve"`.
+- [x] **Resíduo `.next/types/app/diagnostico-lista`** — movido para `%TEMP%`;
+  `npx tsc --noEmit` normal volta a passar.
+- [x] #2 Admin detectado por substring de email — substituído por `role` /
+  `permissions.admin` no documento do Firestore.
+- [x] #3 "Salvar Tudo" sem ação — persiste em `settings`.
+- [x] #5 `servo_ministerial` — trocado por `servo`.
+- [x] #6 Waterfall de `getDoc` no S-21 — `Promise.all`.
+- [x] #7 Chave de oração incompatível — `Fim de semana::Oração inicial` e
+  `...::Oração final`.
+- [x] #8 Restore sem validação de estrutura — valida coleção, documento e
+  campos antes de escrever.
+- [x] #9 Estado global via `window` — substituído por estado React.
+- [x] #4 Backup incompleto — já incluía `field_reports` e `users`; ampliação
+  das coleções do ônibus feita nesta sessão.
 
-### 3. Botão "Salvar Tudo" sem ação (`settings-view.tsx:118-121`)
-**Corrigido ✓** — Agora persiste no Firestore (coleção `settings`).
+## Em aberto — exigem decisão
 
-### 4. Backup incompleto (`settings-view.tsx:48`)
-**Corrigido ✓** — Adicionado `field_reports` e `users`.
+### 1. Regras do Firestore (`firestore.rules`)
+As regras já são granulares, mas ainda permitem que qualquer usuário
+autenticado escreva em `publishers`, `groups`, `midweek_meetings`, `attendance`,
+`field_reports` etc. Restringir por `permissions` pode quebrar o uso diário de
+publicadores não-admin, porque essas permissões não são aplicadas no cliente.
+Além disso, **as regras continuam sem publicar** — sem isso, as coleções novas
+do ônibus podem dar `permission-denied`. Publicação só pelo Firebase Console
+(não há Firebase CLI instalada).
 
-### 5. Responsibility inconsistente (`groups-view.tsx:183`)
-**Problema:** Verifica `'servo_ministerial'` mas o valor salvo é `'servo'`.
-**Correção:** Mudar verificação para `'servo'` em groups-view.tsx e prints-view.tsx.
+### 10. Leitura de `users` por qualquer autenticado (`firestore.rules:80`)
+A tela de usuários só abre para admin, mas a regra `allow read: if isAuth()`
+permite qualquer autenticado ler a coleção. Não basta mudar a regra: a tela do
+ônibus lê `users` para casar designações com `uid`, e o próprio `auth-provider`
+lê o documento do usuário. Uma regra `isAdmin() || docId == uid` exigiria
+adaptar essas telas primeiro.
 
-## 🟠 Altos
-
-### 6. Waterfall de requisições Firestore (`publishers-view.tsx:267-336`)
-**Problema:** `getDoc` sequenciais em vez de `Promise.all`.
-**Correção:** Paralelizar com `Promise.all`.
-
-### 7. Chave de oração incompatível (`weekend-view.tsx:67`)
-**Problema:** Mapeamento `"Tesouros da Palavra::Orações"` não corresponde ao salvamento.
-**Correção:** Ajustar chave para `"Fim de semana::Oração inicial"` e `"Fim de semana::Oração final"`.
-
-### 8. Restore sem validação (`settings-view.tsx:84-109`)
-**Problema:** Qualquer JSON pode ser restaurado.
-**Correção:** Validar estrutura antes de escrever no Firestore.
-
-### 9. Estado global via `window` (`field-report-view.tsx:59-62`)
-**Problema:** `(window as any).__fieldReportDirty`.
-**Correção:** Usar React Context ou callback prop.
-
-### 10. Leitura de todos os usuários sem filtro (`users-view.tsx:73`)
-**Problema:** `onSnapshot(collection(db, 'users'), ...)` sem filtro.
-**Correção:** Aplicar filtro de segurança ou proteger com Firestore rules.
-
----
-
-## Itens Corrigidos Nesta Sessão
+## Histórico anterior (itens já resolvidos)
 
 - [x] Médio #11 — `parseInt` sem radix
 - [x] Médio #12 — `hoursGoal` hardcoded

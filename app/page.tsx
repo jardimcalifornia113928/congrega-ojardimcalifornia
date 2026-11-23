@@ -23,6 +23,7 @@ const AttendanceView = dynamic(() => import('@/components/attendance-view').then
 const UsersView = dynamic(() => import('@/components/users-view').then(m => ({ default: m.UsersView })), { ssr: false });
 const PublicWitnessView = dynamic(() => import('@/components/public-witness-view').then(m => ({ default: m.PublicWitnessView })), { ssr: false });
 const CleaningView = dynamic(() => import('@/components/cleaning-view').then(m => ({ default: m.CleaningView })), { ssr: false });
+const BusArrangementView = dynamic(() => import('@/components/bus-arrangement-view').then(m => ({ default: m.BusArrangementView })), { ssr: false });
 
 export default function Home() {
   const { user, loading, signIn } = useAuth();
@@ -110,6 +111,7 @@ export default function Home() {
           {activeTab === 'territories' && <TerritoriesView />}
           {activeTab === 'public_witness' && <PublicWitnessView />}
           {activeTab === 'cleaning' && <CleaningView />}
+          {activeTab === 'bus' && <BusArrangementView />}
           {activeTab === 'prints' && <PrintsView />}
           {activeTab === 'settings' && <SettingsView />}
           {activeTab === 'users' && <UsersView />}

@@ -90,8 +90,13 @@ export function UsersView() {
         ...targetUser.permissions,
         [permId]: !targetUser.permissions[permId],
       };
+      // Mantém `role` coerente com a permissão Admin: o auth-provider e as
+      // regras do Firestore aceitam os dois campos.
+      const nextRole = permId === 'admin'
+        ? (updatedPerms.admin ? 'admin' : 'user')
+        : targetUser.role;
       const docRef = doc(db, 'users', targetUser.uid);
-      await setDoc(docRef, { permissions: updatedPerms }, { merge: true });
+      await setDoc(docRef, { permissions: updatedPerms, role: nextRole }, { merge: true });
       toast.success(`Permissão atualizada para ${targetUser.displayName || targetUser.email}`);
     } catch (error) {
       console.error("Error updating permission:", error);

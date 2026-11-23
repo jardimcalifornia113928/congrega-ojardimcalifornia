@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { auth, db } from '@/lib/firebase';
-import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
+import { onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { toast } from 'sonner';
 
@@ -16,6 +16,22 @@ const isMasterEmail = (email: string | null | undefined): boolean => {
   const e = email.toLowerCase();
   return ADMIN_EMAILS.includes(e);
 };
+
+const describeAuthError = (error: unknown): string => {
+  const code = (error as any)?.code || 'sem-codigo';
+  if (code === 'auth/unauthorized-domain') return 'Este domínio não está autorizado no Firebase. Adicione localhost em Authentication > Settings.';
+  if (code === 'auth/operation-not-allowed') return 'Login com Google não está habilitado no Firebase Console.';
+  if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') return 'Login cancelado antes de concluir.';
+  if (code === 'auth/network-request-failed') return 'Falha de rede ao falar com o Google. Verifique a conexão.';
+  return `Erro ao fazer login (${code}).`;
+};
+
+// Uma única chamada de getRedirectResult por carregamento de página.
+// Em dev o React StrictMode monta o efeito duas vezes e a segunda chamada
+// pode consumir/anular o resultado do redirect, deixando o usuário deslogado.
+let redirectResultPromise: Promise<unknown> | null = null;
+const consumeRedirectResult = (): Promise<unknown> =>
+  (redirectResultPromise ??= getRedirectResult(auth));
 
 interface AuthContextType {
   user: any;
@@ -71,19 +87,43 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
+    let active = true;
+
     const unsubscribe = onAuthStateChanged(auth, (currentUser: any) => {
       setUser(currentUser);
       if (currentUser) {
         registerUser(currentUser);
       }
-      setLoading(false);
+      if (active) setLoading(false);
     }, () => {
-      setLoading(false);
+      if (active) setLoading(false);
     });
 
-    const timeout = setTimeout(() => setLoading(false), 3000);
+    // Diagnóstico: o handler do Firebase devolve o motivo da falha na URL
+    const params = new URLSearchParams(window.location.search);
+    const handlerError = params.get('authError') || params.get('error');
+    if (handlerError) {
+      console.error('Firebase auth handler error:', handlerError, window.location.href);
+      toast.error(`Falha do Firebase: ${handlerError}`, { duration: 15000 });
+    }
+
+    // Conclui o fluxo de login por redirect (volta do Google).
+    // Mantém o spinner até o resultado chegar para não piscar a tela de login.
+    consumeRedirectResult()
+      .catch((error) => {
+        console.error('Error completing redirect sign-in:', error);
+        toast.error(describeAuthError(error), { duration: 8000 });
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    const timeout = setTimeout(() => {
+      if (active) setLoading(false);
+    }, 5000);
 
     return () => {
+      active = false;
       unsubscribe();
       clearTimeout(timeout);
     };
@@ -98,28 +138,41 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const unsub = onSnapshot(doc(db, 'users', user.uid), (snap) => {
       if (snap.exists()) {
         setUserDoc({ id: snap.id, ...snap.data() });
+      } else {
+        setUserDoc(null);
       }
     });
     return () => unsub();
   }, [user]);
 
-  const isAdmin = userDoc?.role === 'admin' || isMasterEmail(user?.email);
+  // `permissions.admin` é o campo gravado pela tela de usuários; `role` é o
+  // campo legado/master. Qualquer um dos dois habilita o acesso de admin.
+  const isAdmin =
+    userDoc?.role === 'admin' ||
+    userDoc?.permissions?.admin === true ||
+    isMasterEmail(user?.email);
 
   const signIn = async () => {
     const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
     try {
+      // Mesmo fluxo de produção (popup): é o que funciona no navegador do usuário
       await signInWithPopup(auth, provider);
     } catch (error) {
-      const err = error as any;
-      const code = err?.code || '';
-      let msg = 'Erro ao fazer login. Tente novamente.';
-      if (code === 'auth/popup-blocked') msg = 'Popup bloqueado pelo navegador. Permita popups e tente novamente.';
-      else if (code === 'auth/unauthorized-domain') msg = 'Este domínio não está autorizado no Firebase. Adicione localhost em Authentication > Settings.';
-      else if (code === 'auth/operation-not-allowed') msg = 'Login com Google não está habilitado no Firebase Console.';
-      else if (code === 'auth/popup-closed-by-user') msg = 'Popup fechado antes do login ser concluído.';
-      else if (code === 'auth/cancelled-popup-request') msg = 'Outra solicitação de login já está em andamento.';
-      toast.error(msg, { duration: 6000 });
-      console.error("Error signing in:", error);
+      const code = (error as any)?.code || '';
+      console.error('Error signing in:', error);
+      // Navegador embutido/popup bloqueado: cai para redirect na mesma aba
+      if (code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment') {
+        try {
+          await signInWithRedirect(auth, provider);
+          return;
+        } catch (redirectError) {
+          console.error('Error signing in (redirect):', redirectError);
+          toast.error(describeAuthError(redirectError), { duration: 8000 });
+          return;
+        }
+      }
+      toast.error(describeAuthError(error), { duration: 8000 });
     }
   };
 
