@@ -16,6 +16,7 @@ import {
   Receipt,
   Search,
   Settings2,
+  Trash2,
   Upload,
   UserPlus,
   Users,
@@ -33,6 +34,8 @@ import {
   collection,
   doc,
   getDoc,
+  deleteDoc,
+  getDocs,
   onSnapshot,
   query,
   runTransaction,
@@ -99,6 +102,9 @@ const normalizeName = (value?: string): string =>
     .replace(/[^a-z0-9\s]/g, '')
     .trim()
     .replace(/\s+/g, ' ');
+
+/** Único login com permissão para apagar um arranjo inteiro. */
+const OWNER_EMAIL = 'mariomarciofranco@gmail.com';
 
 const KIND_LABEL: Record<BusReceiptKind, string> = {
   PAG: 'Pagamento',
@@ -264,6 +270,10 @@ export function BusArrangementView() {
   const [receipt, setReceipt] = useState<BusReceiptData | null>(null);
   const [photoView, setPhotoView] = useState<string | null>(null);
 
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [deleting, setDeleting] = useState(false);
+
   // ===== Carregamentos =====
 
   useEffect(() => {
@@ -421,6 +431,45 @@ export function BusArrangementView() {
   const canEdit = Boolean(
     selected && user && (isAdmin || (selected.managers ?? []).includes(user.uid)),
   );
+
+  // Mesmo sendo admin, só o dono do app vê e usa a exclusão de arranjos.
+  const canDelete = Boolean(
+    selected && user && (user.email || '').toLowerCase() === OWNER_EMAIL,
+  );
+
+  const removeArrangement = useCallback(async () => {
+    if (!selected || !canDelete || deleting) return;
+    if (deleteConfirm.trim().toUpperCase() !== 'EXCLUIR') {
+      toast.error('Digite EXCLUIR para confirmar.');
+      return;
+    }
+    setDeleting(true);
+    try {
+      const targetId = selected.id;
+      const depSnap = await getDocs(
+        query(collection(db, 'bus_deposits'), where('arrangementId', '==', targetId)),
+      );
+
+      // Fotos primeiro: o acesso à subcoleção depende do depósito existir.
+      await Promise.all(
+        depSnap.docs.map((d) => deleteDoc(doc(db, 'bus_deposits', d.id, 'photo', 'receipt'))),
+      );
+      await Promise.all(depSnap.docs.map((d) => deleteDoc(doc(db, 'bus_deposits', d.id))));
+      await deleteDoc(doc(db, 'bus_arrangements', targetId));
+
+      setSelectedId(arrangements.find((a) => a.id !== targetId)?.id ?? null);
+      setDeleteOpen(false);
+      setDeleteConfirm('');
+      toast.success(
+        `Arranjo excluído junto com ${depSnap.docs.length} depósito(s) e seus comprovantes.`,
+      );
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, 'bus_arrangements');
+      toast.error('Não foi possível excluir. Verifique as regras do Firestore.', { duration: 8000 });
+    } finally {
+      setDeleting(false);
+    }
+  }, [arrangements, canDelete, deleteConfirm, deleting, selected]);
 
   // ===== Persistência =====
 
@@ -1282,6 +1331,19 @@ export function BusArrangementView() {
               </Button>
             </>
           )}
+          {canDelete && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteConfirm('');
+                setDeleteOpen(true);
+              }}
+              title="Excluir este arranjo e todos os depósitos (somente dono)"
+              className="h-9 gap-2 border-red-500/40 text-[11px] font-bold text-red-400 hover:border-red-500 hover:text-red-300"
+            >
+              <Trash2 className="h-4 w-4" /> Excluir
+            </Button>
+          )}
         </div>
       </header>
 
@@ -2086,6 +2148,52 @@ export function BusArrangementView() {
             <DialogTitle className="text-white">Comprovante do depósito</DialogTitle>
           </DialogHeader>
           {photoView && <img src={photoView} alt="Comprovante" className="max-h-[60vh] w-full rounded-lg object-contain" />}
+        </DialogContent>
+      </Dialog>
+
+      {/* ===== Diálogo: excluir arranjo (somente dono) ===== */}
+      <Dialog open={deleteOpen} onOpenChange={(open) => !open && setDeleteOpen(false)}>
+        <DialogContent className="bg-[#0F172A] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-white">Excluir arranjo?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-lg border border-red-500/30 bg-red-500/5 px-3 py-2 text-xs text-red-300">
+              <p className="font-bold">{selected?.title}</p>
+              <p className="mt-1 text-[#94A3B8]">
+                Apaga participantes, pagamentos, repasses, depósitos e fotos dos comprovantes.
+                Não há como desfazer.
+              </p>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[11px] text-[#94A3B8]">
+                Digite <span className="font-bold text-white">EXCLUIR</span> para confirmar
+              </Label>
+              <Input
+                value={deleteConfirm}
+                onChange={(e) => setDeleteConfirm(e.target.value)}
+                placeholder="EXCLUIR"
+                className="h-9 border-[#1E293B] bg-[#0B1220] text-xs text-white"
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex-col gap-2 border-[#1E293B] bg-transparent sm:flex-col">
+            <Button
+              onClick={removeArrangement}
+              disabled={deleting || deleteConfirm.trim().toUpperCase() !== 'EXCLUIR'}
+              className="h-9 w-full gap-2 bg-red-600 text-xs font-bold text-white hover:bg-red-700"
+            >
+              {deleting && <Loader2 className="h-4 w-4 animate-spin" />}
+              <Trash2 className="h-4 w-4" /> Excluir definitivamente
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setDeleteOpen(false)}
+              className="h-9 w-full text-xs text-[#64748B]"
+            >
+              Cancelar
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
