@@ -211,6 +211,8 @@ export interface BusArrangement {
   status: 'aberto' | 'fechado' | 'concluido';
   /** Os 2 responsáveis (uids) que podem alterar */
   managers: string[];
+  /** Uids dos designados com login, sincronizados pelo admin (regras do Firestore) */
+  managerUids?: string[];
   collectorId?: string;
   collectorName?: string;
   depositorId?: string;

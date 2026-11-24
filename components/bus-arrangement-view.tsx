@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   ArrowRightLeft,
@@ -116,6 +116,19 @@ const loginMatchesPublisher = (login: LoginLike, publisher: Publisher): boolean 
   if (full && (display === full || emailPrefix === full)) return true;
   if (first && last && display.includes(first) && display.includes(last)) return true;
   if (first && emailPrefix.includes(first) && (!last || emailPrefix.includes(last))) return true;
+  // Alguns logins do Google mostram só o primeiro nome ou um e-mail do tipo
+  // richard.silva@..., sem o sobrenome do cadastro. Nesses casos o primeiro
+  // nome já é suficiente para ligar o login ao designado.
+  const firstToken = first.split(' ')[0];
+  if (firstToken.length >= 4) {
+    const displayStarts = display === firstToken || display.startsWith(`${firstToken} `);
+    const emailStarts =
+      emailPrefix === firstToken ||
+      emailPrefix.startsWith(`${firstToken}.`) ||
+      emailPrefix.startsWith(`${firstToken}_`) ||
+      emailPrefix.startsWith(`${firstToken}-`);
+    if (displayStarts || emailStarts) return true;
+  }
   return false;
 };
 
@@ -551,6 +564,32 @@ export function BusArrangementView() {
   const canDelete = Boolean(
     selected && user && (user.email || '').toLowerCase() === OWNER_EMAIL,
   );
+
+  // Arranjos antigos foram gravados com o id do publicador em `managers`, sem
+  // `managerUids`, então as regras novas não reconhecem o login dos designados.
+  // O admin sincroniza esses documentos uma vez, automaticamente, ao abrir a tela.
+  const syncedRef = useRef(new Set<string>());
+  useEffect(() => {
+    if (!isAdmin || !managerUids.length) return;
+    const missing = arrangements.filter(
+      (arrangement) =>
+        (!Array.isArray(arrangement.managerUids) || arrangement.managerUids.length === 0) &&
+        !syncedRef.current.has(arrangement.id),
+    );
+    if (!missing.length) return;
+    missing.forEach((arrangement) => syncedRef.current.add(arrangement.id));
+    Promise.all(
+      missing.map((arrangement) =>
+        updateDoc(doc(db, 'bus_arrangements', arrangement.id), {
+          managerUids,
+          updatedAt: new Date().toISOString(),
+        }),
+      ),
+    ).catch((error) => {
+      missing.forEach((arrangement) => syncedRef.current.delete(arrangement.id));
+      handleFirestoreError(error, OperationType.UPDATE, 'bus_arrangements');
+    });
+  }, [arrangements, isAdmin, managerUids]);
 
   const removeArrangement = useCallback(async () => {
     if (!selected || !canDelete || deleting) return;
