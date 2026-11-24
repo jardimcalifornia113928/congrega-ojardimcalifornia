@@ -2,6 +2,7 @@ import { PDFDocument, rgb, StandardFonts, type PDFFont, type PDFPage } from 'pdf
 
 export interface BusPassengerRow {
   name: string;
+  cpf?: string;
   phone?: string;
   groupName?: string;
 }
@@ -63,11 +64,12 @@ const clip = (text: string | undefined, font: PDFFont, size: number, maxWidth: n
 };
 
 const COLS = {
-  name: { x: MARGIN, width: 235 },
-  phone: { x: 275, width: 110 },
-  group: { x: 390, width: 95 },
-  ida: { x: 492, width: 30 },
-  volta: { x: 532, width: 30 },
+  name: { x: MARGIN, width: 150 },
+  cpf: { x: MARGIN + 155, width: 100 },
+  phone: { x: MARGIN + 260, width: 92 },
+  group: { x: MARGIN + 357, width: 80 },
+  ida: { x: MARGIN + 442, width: 30 },
+  volta: { x: MARGIN + 487, width: 30 },
 };
 
 const drawHeader = (
@@ -130,6 +132,7 @@ const drawHeader = (
   });
   const headers: [number, string][] = [
     [COLS.name.x, 'NOME'],
+    [COLS.cpf.x, 'CPF'],
     [COLS.phone.x, 'TELEFONE'],
     [COLS.group.x, 'GRUPO'],
     [COLS.ida.x, 'IDA'],
@@ -217,6 +220,13 @@ export async function generateBusPassengerListPDF(data: BusPassengerListData): P
         x: COLS.name.x,
         y: baseY,
         size: 10,
+        font: regular,
+        color: INK,
+      });
+      page.drawText(clip(passenger.cpf, regular, 9.5, COLS.cpf.width - 6), {
+        x: COLS.cpf.x,
+        y: baseY,
+        size: 9.5,
         font: regular,
         color: INK,
       });

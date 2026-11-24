@@ -5,6 +5,7 @@ export interface Publisher {
   lastName: string;
   phone?: string;
   secondaryPhone?: string;
+  cpf?: string;
   profession?: string;
   address?: string;
   birthDate?: string;
@@ -175,6 +176,7 @@ export interface BusParticipant {
   name: string;
   groupName?: string;
   phone?: string;
+  cpf?: string;
   /** Valor próprio (criança, casal, irmão com desconto). Sem isso, usa o valor do assento. */
   customShare?: number;
   status: 'ativo' | 'desistente';

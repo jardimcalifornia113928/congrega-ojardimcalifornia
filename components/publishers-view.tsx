@@ -19,7 +19,7 @@ import {
 import { S21PreviewModal } from '@/components/s21-preview-modal';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { phoneMask } from '@/lib/utils';
+import { cpfMask, isValidCPF, phoneMask } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -71,6 +71,7 @@ export function PublishersView() {
     lastName: "",
     phone: "",
     secondaryPhone: "",
+    cpf: "",
     profession: "",
     address: "",
     birthDate: "",
@@ -86,7 +87,7 @@ export function PublishersView() {
   const [publishers, setPublishers] = useState<any[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   // Fetch Publishers
   React.useEffect(() => {
@@ -174,6 +175,10 @@ export function PublishersView() {
     const nameParts = fullName.trim().split(/\s+/).filter(Boolean);
     if (nameParts.length < 2) {
       toast.error("Nome completo deve ter pelo menos nome e sobrenome!");
+      return;
+    }
+    if (publisherData.cpf && !isValidCPF(publisherData.cpf)) {
+      toast.error("CPF inválido!");
       return;
     }
     const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
@@ -509,6 +514,18 @@ export function PublishersView() {
                            className="h-12 bg-[#1E293B]/50 border-[#1E293B]/50 rounded-xl focus:ring-blue-500/20" 
                          />
                     </div>
+                    {isAdmin && (
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black text-[#64748B] tracking-widest uppercase">CPF</Label>
+                        <Input 
+                          value={publisherData.cpf || ''}
+                          onChange={(e) => setPublisherData({ ...publisherData, cpf: cpfMask(e.target.value) })}
+                          placeholder="000.000.000-00" 
+                          inputMode="numeric"
+                          className="h-12 bg-[#1E293B]/50 border-[#1E293B]/50 rounded-xl focus:ring-blue-500/20" 
+                        />
+                      </div>
+                    )}
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black text-[#64748B] tracking-widest uppercase">Profissão</Label>
                       <Input 

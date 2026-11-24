@@ -29,6 +29,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/components/auth-provider';
 import { handleFirestoreError, OperationType } from '@/lib/firebase-utils';
+import { cpfMask, isValidCPF } from '@/lib/utils';
 import {
   addDoc,
   collection,
@@ -40,6 +41,7 @@ import {
   query,
   runTransaction,
   setDoc,
+  serverTimestamp,
   updateDoc,
   where,
 } from 'firebase/firestore';
@@ -290,6 +292,54 @@ interface LedgerEntry {
   canceled?: boolean;
 }
 
+/** Campo de CPF com máscara: só grava quando o valor está completo e válido. */
+function CpfField({
+  value,
+  disabled,
+  onCommit,
+}: {
+  value?: string;
+  disabled?: boolean;
+  onCommit: (cpf: string) => void;
+}) {
+  const [draft, setDraft] = useState(value ?? '');
+  useEffect(() => setDraft(value ?? ''), [value]);
+
+  const commit = () => {
+    const digits = draft.replace(/\D/g, '');
+    if (!digits) {
+      if (draft !== (value ?? '')) onCommit('');
+      return;
+    }
+    if (digits.length !== 11) {
+      toast.error('CPF incompleto.');
+      setDraft(value ?? '');
+      return;
+    }
+    if (!isValidCPF(draft)) {
+      toast.error('CPF inválido.');
+      setDraft(value ?? '');
+      return;
+    }
+    if (draft !== (value ?? '')) onCommit(draft);
+  };
+
+  return (
+    <Input
+      value={draft}
+      onChange={(event) => setDraft(cpfMask(event.target.value))}
+      onBlur={commit}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') event.currentTarget.blur();
+      }}
+      disabled={disabled}
+      placeholder="000.000.000-00"
+      inputMode="numeric"
+      className="h-7 w-32 border-[#1E293B] bg-[#0B1220] px-2 text-[11px] text-white disabled:opacity-60"
+    />
+  );
+}
+
 export function BusArrangementView() {
   const { user, isAdmin } = useAuth();
 
@@ -323,7 +373,7 @@ export function BusArrangementView() {
   });
 
   const [avulsoOpen, setAvulsoOpen] = useState(false);
-  const [avulsoForm, setAvulsoForm] = useState({ name: '', phone: '' });
+  const [avulsoForm, setAvulsoForm] = useState({ name: '', phone: '', cpf: '' });
 
   const [paymentTarget, setPaymentTarget] = useState<BusParticipant | null>(null);
   const [payForm, setPayForm] = useState<{ amount: string; method: BusPaymentMethod; receivedById: string }>({
@@ -560,6 +610,9 @@ export function BusArrangementView() {
       (isAdmin || managerUids.includes(user.uid) || (selected.managers ?? []).includes(user.uid)),
   );
 
+  // CPF é dado sensível: só admin e designados do ônibus veem/editam.
+  const canSeeCpf = Boolean(user && (isAdmin || managerUids.includes(user.uid)));
+
   // Mesmo sendo admin, só o dono do app vê e usa a exclusão de arranjos.
   const canDelete = Boolean(
     selected && user && (user.email || '').toLowerCase() === OWNER_EMAIL,
@@ -780,6 +833,43 @@ export function BusArrangementView() {
     [participants],
   );
 
+  /**
+   * Grava o CPF no participante do arranjo e, quando é publicador, também no
+   * cadastro dele. Nunca inclui o valor em log ou mensagem.
+   */
+  const commitCpf = async (cpf: string, participant?: BusParticipant, publisher?: Publisher) => {
+    if (!selected || !canSeeCpf) return;
+    setSaving(true);
+    try {
+      const writes: Promise<unknown>[] = [];
+      if (publisher) {
+        writes.push(
+          updateDoc(doc(db, 'publishers', publisher.id), {
+            cpf,
+            updatedAt: serverTimestamp(),
+          }),
+        );
+      }
+      if (participant) {
+        const next = participants.map((p) => (p.id === participant.id ? { ...p, cpf } : p));
+        writes.push(
+          updateDoc(doc(db, 'bus_arrangements', selected.id), {
+            participants: next,
+            managerUids,
+            updatedAt: new Date().toISOString(),
+          }),
+        );
+      }
+      await Promise.all(writes);
+      toast.success('CPF salvo.');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, 'publishers');
+      toast.error('Não foi possível salvar o CPF.', { duration: 8000 });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const togglePublisher = async (publisher: Publisher) => {
     if (!selected || !canEdit) return;
     const existing = participants.find((p) => p.publisherId === publisher.id);
@@ -801,6 +891,7 @@ export function BusArrangementView() {
           name: fullName(publisher),
           groupName: groupName(publisher.groupId),
           phone: publisher.phone || publisher.secondaryPhone || '',
+          cpf: publisher.cpf || '',
           status: 'ativo',
           joinedAt: new Date().toISOString(),
           payments: [],
@@ -816,6 +907,10 @@ export function BusArrangementView() {
       toast.error('Informe o nome.');
       return;
     }
+    if (canSeeCpf && avulsoForm.cpf && !isValidCPF(avulsoForm.cpf)) {
+      toast.error('CPF inválido.');
+      return;
+    }
     await saveArrangement({
       participants: [
         ...participants,
@@ -823,6 +918,7 @@ export function BusArrangementView() {
           id: createId(),
           name: avulsoForm.name.trim(),
           phone: avulsoForm.phone.trim(),
+          ...(canSeeCpf && avulsoForm.cpf ? { cpf: avulsoForm.cpf } : {}),
           status: 'ativo',
           joinedAt: new Date().toISOString(),
           payments: [],
@@ -830,7 +926,7 @@ export function BusArrangementView() {
       ],
     });
     setAvulsoOpen(false);
-    setAvulsoForm({ name: '', phone: '' });
+    setAvulsoForm({ name: '', phone: '', cpf: '' });
     toast.success('Participante avulso adicionado.');
   };
 
@@ -847,6 +943,7 @@ export function BusArrangementView() {
       name: fullName(publisher),
       groupName: groupName(publisher.groupId),
       phone: publisher.phone || publisher.secondaryPhone || '',
+      cpf: publisher.cpf || '',
       status: 'ativo',
       joinedAt: new Date().toISOString(),
       payments: [],
@@ -958,6 +1055,7 @@ export function BusArrangementView() {
       toast.info('Nenhum participante pagou ainda.');
       return;
     }
+    const publisherById = new Map(publishers.map((p) => [p.id, p]));
     const data: BusPassengerListData = {
       congregationName: settings.congregationName || 'Congregação Jardim Califórnia',
       congregationAddress: settings.address,
@@ -965,7 +1063,12 @@ export function BusArrangementView() {
       arrangementTitle: selected.title,
       sheets: passengerListDays(selected),
       generatedAt: new Date().toISOString(),
-      passengers: payers.map((p) => ({ name: p.name, phone: p.phone, groupName: p.groupName })),
+      passengers: payers.map((p) => ({
+        name: p.name,
+        cpf: p.cpf || publisherById.get(p.publisherId || '')?.cpf || '',
+        phone: p.phone,
+        groupName: p.groupName,
+      })),
     };
     try {
       const bytes = await generateBusPassengerListPDF(data);
@@ -1641,6 +1744,7 @@ export function BusArrangementView() {
                   <th className="px-3 py-3">Grupo</th>
                   <th className="px-3 py-3">Valor</th>
                   <th className="px-3 py-3">Telefone</th>
+                  {canSeeCpf && <th className="px-3 py-3">CPF</th>}
                 </tr>
               </thead>
               <tbody>
@@ -1669,6 +1773,15 @@ export function BusArrangementView() {
                         )}
                       </td>
                       <td className="px-3 py-2 text-[#94A3B8]">{publisher.phone || publisher.secondaryPhone || '—'}</td>
+                      {canSeeCpf && (
+                        <td className="px-3 py-2">
+                          <CpfField
+                            value={participant?.cpf || publisher.cpf}
+                            disabled={!canEdit}
+                            onCommit={(cpf) => commitCpf(cpf, participant, publisher)}
+                          />
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
@@ -1699,6 +1812,15 @@ export function BusArrangementView() {
                         {formatBRL(participantDue(participant, selected?.seatPrice ?? 0))}
                       </td>
                       <td className="px-3 py-2 text-[#94A3B8]">{participant.phone || '—'}</td>
+                      {canSeeCpf && (
+                        <td className="px-3 py-2">
+                          <CpfField
+                            value={participant.cpf}
+                            disabled={!canEdit}
+                            onCommit={(cpf) => commitCpf(cpf, participant)}
+                          />
+                        </td>
+                      )}
                     </tr>
                   ))}
               </tbody>
@@ -2081,6 +2203,18 @@ export function BusArrangementView() {
                 className="mt-1 border-[#1E293B] bg-[#0B1220] text-xs text-white"
               />
             </div>
+            {canSeeCpf && (
+              <div>
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-[#64748B]">CPF (opcional)</Label>
+                <Input
+                  value={avulsoForm.cpf}
+                  onChange={(e) => setAvulsoForm((prev) => ({ ...prev, cpf: cpfMask(e.target.value) }))}
+                  placeholder="000.000.000-00"
+                  inputMode="numeric"
+                  className="mt-1 border-[#1E293B] bg-[#0B1220] text-xs text-white"
+                />
+              </div>
+            )}
           </div>
           <DialogFooter className="border-[#1E293B] bg-transparent">
             <Button variant="outline" onClick={() => setAvulsoOpen(false)} className="h-9 border-[#1E293B] text-xs font-bold text-[#94A3B8]">
