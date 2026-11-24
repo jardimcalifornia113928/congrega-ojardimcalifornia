@@ -484,6 +484,42 @@ export function BusArrangementView() {
     [responsibleOptions],
   );
 
+  /** Assistente e Super. de ônibus podem receber — os dois aparecem no recibo. */
+  const receiverOptions = useMemo(() => {
+    const options = [...responsibleOptions.collector, ...responsibleOptions.depositor].map(
+      (option) => ({ id: option.id, name: option.name }),
+    );
+    const seen = new Set<string>();
+    const unique = options.filter((option) => {
+      if (seen.has(option.id)) return false;
+      seen.add(option.id);
+      return true;
+    });
+    if (selected?.collectorId && !unique.some((o) => o.id === selected.collectorId)) {
+      unique.unshift({
+        id: selected.collectorId,
+        name: selected.collectorName || userName(selected.collectorId) || 'Assistente',
+      });
+    }
+    if (selected?.depositorId && !unique.some((o) => o.id === selected.depositorId)) {
+      unique.push({
+        id: selected.depositorId,
+        name: selected.depositorName || userName(selected.depositorId) || 'Super. de ônibus',
+      });
+    }
+    return unique;
+  }, [responsibleOptions, selected, userName]);
+
+  /** Nome que vai para o recibo: prioridade para o designado escolhido. */
+  const receiverName = useCallback(
+    (id?: string) =>
+      responsibleName(id) ||
+      nameOf(id) ||
+      (id && id === user?.uid ? user?.displayName || user?.email || '' : '') ||
+      '',
+    [nameOf, responsibleName, user],
+  );
+
   /**
    * Uids dos designados com login. Também inclui o usuário atual pelo nome do
    * Google, caso a leitura de `users` esteja bloqueada pelas regras do Firestore.
@@ -910,11 +946,17 @@ export function BusArrangementView() {
   const openPayment = (participant: BusParticipant) => {
     if (!canEdit) return;
     const balance = participantBalance(participant, selected?.seatPrice ?? 0);
+    const meAsReceiver = [...responsibleOptions.collector, ...responsibleOptions.depositor].find(
+      (option) =>
+        option.id === user?.uid || (user ? loginMatchesPublisher(user, option.publisher) : false),
+    );
     setPaymentTarget(participant);
     setPayForm({
       amount: formatMoneyInput(Math.max(0, balance).toFixed(2)),
       method: 'dinheiro',
-      receivedById: selected?.collectorId || user?.uid || '',
+      // Quem está lançando e é designado vira o recebedor padrão; o nome dele
+      // é que aparece no recibo. Se não for designado, mantém o assistente.
+      receivedById: meAsReceiver?.id || selected?.collectorId || receiverOptions[0]?.id || '',
     });
   };
 
@@ -925,8 +967,9 @@ export function BusArrangementView() {
       toast.error('Informe um valor válido.');
       return;
     }
-    const receivedById = payForm.receivedById || selected.collectorId || user?.uid || '';
-    const receivedByName = nameOf(receivedById) || selected.collectorName || 'Responsável';
+    const receivedById =
+      payForm.receivedById || selected.collectorId || receiverOptions[0]?.id || user?.uid || '';
+    const receivedByName = receiverName(receivedById) || selected.collectorName || 'Responsável';
 
     const authCode = generateAuthCode();
     const issuedAt = new Date().toISOString();
@@ -1063,7 +1106,7 @@ export function BusArrangementView() {
       toast.error('Defina quem deposita, diferente de quem está com o dinheiro.');
       return;
     }
-    const toName = nameOf(toId) || selected.depositorName || 'Depositante';
+    const toName = receiverName(toId) || selected.depositorName || 'Depositante';
 
     const alreadyCovered = new Set((selected.transfers ?? []).flatMap((t) => t.coveredPayments ?? []));
     const coveredPayments = participants
@@ -1713,30 +1756,42 @@ export function BusArrangementView() {
             <div className="rounded-xl border border-[#1E293B] bg-[#0F172A] p-4">
               <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Em mãos</p>
               <div className="space-y-2">
-                {hands.map((entry) => (
-                  <div key={entry.id} className="flex items-center justify-between gap-2 rounded-lg bg-[#0B1220] px-3 py-2">
-                    <div className="min-w-0">
-                      <p className="truncate text-xs font-medium text-white">{entry.name || userName(entry.id) || 'Responsável'}</p>
-                      <p className="text-[10px] text-[#64748B]">
-                        {entry.id === selected?.depositorId ? 'deposita no banco' : 'recebe dos participantes'}
-                      </p>
+                {hands.map((entry) => {
+                  const received = participants.reduce(
+                    (sum, participant) =>
+                      sum +
+                      (participant.payments ?? [])
+                        .filter((pay) => !pay.canceled && pay.receivedById === entry.id)
+                        .reduce((total, pay) => total + (pay.amount || 0), 0),
+                    0,
+                  );
+                  const roles: string[] = [];
+                  if (received > 0.005) roles.push(`recebeu ${formatBRL(received)}`);
+                  if (entry.id === selected?.depositorId) roles.push('deposita no banco');
+                  else if (received <= 0.005) roles.push('recebe dos participantes');
+                  return (
+                    <div key={entry.id} className="flex items-center justify-between gap-2 rounded-lg bg-[#0B1220] px-3 py-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-medium text-white">{entry.name || userName(entry.id) || 'Responsável'}</p>
+                        <p className="text-[10px] text-[#64748B]">{roles.join(' · ') || '—'}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-bold ${entry.amount > 0.005 ? 'text-amber-400' : 'text-[#64748B]'}`}>
+                          {formatBRL(entry.amount)}
+                        </span>
+                        {canEdit && entry.amount > 0.005 && entry.id !== selected?.depositorId && (
+                          <Button
+                            size="sm"
+                            onClick={() => registerTransfer(entry)}
+                            className="h-7 gap-1 bg-[#0EA5E9] text-[10px] font-bold text-white hover:bg-[#0284C7]"
+                          >
+                            <ArrowRightLeft className="h-3 w-3" /> Repassar
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs font-bold ${entry.amount > 0.005 ? 'text-amber-400' : 'text-[#64748B]'}`}>
-                        {formatBRL(entry.amount)}
-                      </span>
-                      {canEdit && entry.amount > 0.005 && entry.id !== selected?.depositorId && (
-                        <Button
-                          size="sm"
-                          onClick={() => registerTransfer(entry)}
-                          className="h-7 gap-1 bg-[#0EA5E9] text-[10px] font-bold text-white hover:bg-[#0284C7]"
-                        >
-                          <ArrowRightLeft className="h-3 w-3" /> Repassar
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               {canEdit && (
                 <Button
@@ -2044,16 +2099,17 @@ export function BusArrangementView() {
                 onChange={(e) => setPayForm((prev) => ({ ...prev, receivedById: e.target.value }))}
                 className="mt-1 h-8 w-full rounded-lg border border-[#1E293B] bg-[#0B1220] px-2 text-xs text-white"
               >
-                {selected?.collectorId && (
-                  <option value={selected.collectorId}>{selected.collectorName || userName(selected.collectorId)}</option>
-                )}
-                {managerUids
-                  .filter((uid) => uid !== selected?.collectorId)
-                  .map((uid) => (
-                    <option key={uid} value={uid}>
-                      {responsibleName(uid) || displayPerson(undefined, uid)}
+                {receiverOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
+                ))}
+                {payForm.receivedById &&
+                  !receiverOptions.some((option) => option.id === payForm.receivedById) && (
+                    <option value={payForm.receivedById}>
+                      {receiverName(payForm.receivedById) || 'Responsável'}
                     </option>
-                  ))}
+                  )}
               </select>
             </div>
           </div>
