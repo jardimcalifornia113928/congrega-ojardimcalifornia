@@ -103,6 +103,67 @@ const normalizeName = (value?: string): string =>
     .trim()
     .replace(/\s+/g, ' ');
 
+type LoginLike = { uid?: string; displayName?: string | null; email?: string | null };
+
+/** Liga o login do Google ao publicador designado pelo nome, sem depender da coleção users. */
+const loginMatchesPublisher = (login: LoginLike, publisher: Publisher): boolean => {
+  const full = normalizeName(fullName(publisher));
+  const first = normalizeName(publisher.firstName);
+  const last = normalizeName(publisher.lastName);
+  const display = normalizeName(login.displayName || '');
+  const emailPrefix = normalizeName((login.email || '').split('@')[0]);
+  if (!display && !emailPrefix) return false;
+  if (full && (display === full || emailPrefix === full)) return true;
+  if (first && last && display.includes(first) && display.includes(last)) return true;
+  if (first && emailPrefix.includes(first) && (!last || emailPrefix.includes(last))) return true;
+  return false;
+};
+
+const findPublisherLogin = (publisher: Publisher, users: UserData[]): UserData | undefined =>
+  users.find((u) => loginMatchesPublisher(u, publisher));
+
+/** Converte "1.234,56", "1234.56" ou "1234" em número. */
+const parseMoney = (raw: string): number => {
+  const value = String(raw ?? '').trim();
+  if (!value) return NaN;
+  let digits = value.replace(/[^\d,.-]/g, '');
+  const lastComma = digits.lastIndexOf(',');
+  const lastDot = digits.lastIndexOf('.');
+  if (lastComma >= 0 && lastDot >= 0) {
+    digits =
+      lastComma > lastDot
+        ? digits.replace(/\./g, '').replace(',', '.')
+        : digits.replace(/,/g, '');
+  } else if (lastComma >= 0) {
+    const decimals = digits.length - lastComma - 1;
+    digits =
+      decimals === 3
+        ? digits.replace(/,/g, '')
+        : digits.replace(',', '.');
+  }
+  const number = Number(digits);
+  return Number.isFinite(number) ? number : NaN;
+};
+
+/** Máscara de reais para o campo de valor: 1234,5 => 1.234,5. */
+const formatMoneyInput = (raw: string): string => {
+  const value = String(raw ?? '').replace(/[^\d,.]/g, '');
+  if (!value) return '';
+  const separator = Math.max(value.lastIndexOf(','), value.lastIndexOf('.'));
+  const hasSeparator = separator >= 0;
+  const integer = (hasSeparator ? value.slice(0, separator) : value)
+    .replace(/\D/g, '')
+    .replace(/^0+(?=\d)/, '');
+  const decimals = hasSeparator
+    ? value
+        .slice(separator + 1)
+        .replace(/\D/g, '')
+        .slice(0, 2)
+    : '';
+  const grouped = integer.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return hasSeparator ? `${grouped},${decimals}` : grouped;
+};
+
 /** Único login com permissão para apagar um arranjo inteiro. */
 const OWNER_EMAIL = 'mariomarciofranco@gmail.com';
 
@@ -403,14 +464,9 @@ export function BusArrangementView() {
         .filter((p) => p.designations?.includes(key))
         .map((p) => {
           const name = fullName(p);
-          const normalized = normalizeName(name);
-          // Se houver login com o mesmo nome, usar o uid para manter a permissão de edição.
-          const match = appUsers.find(
-            (u) =>
-              (u.displayName && normalizeName(u.displayName) === normalized) ||
-              (u.email && normalizeName(u.email.split('@')[0]) === normalized),
-          );
-          return { id: match?.uid || p.id, name: name || match?.displayName || '' };
+          // Login com o mesmo nome => usar o uid, para a permissão de edição funcionar.
+          const match = findPublisherLogin(p, appUsers);
+          return { id: match?.uid || p.id, name: name || match?.displayName || '', publisher: p };
         })
         .filter((option) => option.name);
 
@@ -428,8 +484,31 @@ export function BusArrangementView() {
     [responsibleOptions],
   );
 
+  /**
+   * Uids dos designados com login. Também inclui o usuário atual pelo nome do
+   * Google, caso a leitura de `users` esteja bloqueada pelas regras do Firestore.
+   */
+  const managerUids = useMemo(() => {
+    const designated = [...responsibleOptions.collector, ...responsibleOptions.depositor];
+    const ids = new Set<string>(designated.map((option) => option.id));
+    if (user) {
+      if (designated.some((option) => loginMatchesPublisher(user, option.publisher))) {
+        ids.add(user.uid);
+      }
+    }
+    appUsers.forEach((u) => {
+      if (designated.some((option) => loginMatchesPublisher(u, option.publisher))) ids.add(u.uid);
+    });
+    return Array.from(ids);
+  }, [appUsers, responsibleOptions, user]);
+
+  // Designados podem editar qualquer arranjo e criar novos, mesmo que o arranjo
+  // antigo tenha gravado o id do publicador em vez do uid do login.
+  const canCreate = Boolean(user && (isAdmin || managerUids.includes(user.uid)));
   const canEdit = Boolean(
-    selected && user && (isAdmin || (selected.managers ?? []).includes(user.uid)),
+    selected &&
+      user &&
+      (isAdmin || managerUids.includes(user.uid) || (selected.managers ?? []).includes(user.uid)),
   );
 
   // Mesmo sendo admin, só o dono do app vê e usa a exclusão de arranjos.
@@ -480,6 +559,7 @@ export function BusArrangementView() {
       try {
         await updateDoc(doc(db, 'bus_arrangements', selected.id), {
           ...patch,
+          managerUids,
           updatedAt: new Date().toISOString(),
         });
       } catch (error) {
@@ -490,7 +570,7 @@ export function BusArrangementView() {
         setSaving(false);
       }
     },
-    [selected],
+    [managerUids, selected],
   );
 
   /**
@@ -588,6 +668,7 @@ export function BusArrangementView() {
         depositorId: form.depositorId,
         depositorName: responsibleName(form.depositorId),
         managers,
+        managerUids,
         status: 'aberto' as const,
         updatedAt: new Date().toISOString(),
       };
@@ -831,7 +912,7 @@ export function BusArrangementView() {
     const balance = participantBalance(participant, selected?.seatPrice ?? 0);
     setPaymentTarget(participant);
     setPayForm({
-      amount: Math.max(0, balance).toFixed(2),
+      amount: formatMoneyInput(Math.max(0, balance).toFixed(2)),
       method: 'dinheiro',
       receivedById: selected?.collectorId || user?.uid || '',
     });
@@ -839,7 +920,7 @@ export function BusArrangementView() {
 
   const registerPayment = async () => {
     if (!selected || !paymentTarget) return;
-    const amount = Number(String(payForm.amount).replace(',', '.'));
+    const amount = parseMoney(payForm.amount);
     if (!amount || amount <= 0) {
       toast.error('Informe um valor válido.');
       return;
@@ -1315,21 +1396,21 @@ export function BusArrangementView() {
             <FileText className="h-4 w-4" /> Lista PDF
           </Button>
           {canEdit && (
-            <>
-              <Button
-                variant="outline"
-                onClick={openEditArrangement}
-                className="h-9 gap-2 border-[#1E293B] text-[11px] font-bold text-[#94A3B8] hover:text-white"
-              >
-                <Settings2 className="h-4 w-4" /> Editar
-              </Button>
-              <Button
-                onClick={openNewArrangement}
-                className="h-9 gap-2 bg-[#0EA5E9] text-[11px] font-bold text-white hover:bg-[#0284C7]"
-              >
-                <Plus className="h-4 w-4" /> Novo
-              </Button>
-            </>
+            <Button
+              variant="outline"
+              onClick={openEditArrangement}
+              className="h-9 gap-2 border-[#1E293B] text-[11px] font-bold text-[#94A3B8] hover:text-white"
+            >
+              <Settings2 className="h-4 w-4" /> Editar
+            </Button>
+          )}
+          {canCreate && (
+            <Button
+              onClick={openNewArrangement}
+              className="h-9 gap-2 bg-[#0EA5E9] text-[11px] font-bold text-white hover:bg-[#0284C7]"
+            >
+              <Plus className="h-4 w-4" /> Novo
+            </Button>
           )}
           {canDelete && (
             <Button
@@ -1929,8 +2010,11 @@ export function BusArrangementView() {
               <Label className="text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Valor recebido (R$)</Label>
               <Input
                 value={payForm.amount}
-                onChange={(e) => setPayForm((prev) => ({ ...prev, amount: e.target.value }))}
+                onChange={(e) =>
+                  setPayForm((prev) => ({ ...prev, amount: formatMoneyInput(e.target.value) }))
+                }
                 inputMode="decimal"
+                placeholder="0,00"
                 className="mt-1 border-[#1E293B] bg-[#0B1220] text-xs text-white"
               />
               {paymentTarget && (
@@ -1963,7 +2047,7 @@ export function BusArrangementView() {
                 {selected?.collectorId && (
                   <option value={selected.collectorId}>{selected.collectorName || userName(selected.collectorId)}</option>
                 )}
-                {(selected?.managers ?? [])
+                {managerUids
                   .filter((uid) => uid !== selected?.collectorId)
                   .map((uid) => (
                     <option key={uid} value={uid}>
