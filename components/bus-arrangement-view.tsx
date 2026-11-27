@@ -9,6 +9,7 @@ import {
   Download,
   FileImage,
   FileText,
+  HeartHandshake,
   Loader2,
   MessageCircle,
   Plus,
@@ -49,6 +50,7 @@ import { toast } from 'sonner';
 import type {
   BusArrangement,
   BusDeposit,
+  BusDonation,
   BusParticipant,
   BusPayment,
   BusPaymentMethod,
@@ -67,6 +69,7 @@ import {
   formatDateTimeBR,
   generateAuthCode,
   nextReceiptNo,
+  parseDateOnly,
   participantBalance,
   participantDue,
   participantPaid,
@@ -184,6 +187,7 @@ const OWNER_EMAIL = 'mariomarciofranco@gmail.com';
 
 const KIND_LABEL: Record<BusReceiptKind, string> = {
   PAG: 'Pagamento',
+  DON: 'Donativo',
   REP: 'Repasse',
   DEP: 'Depósito',
   DEV: 'Devolução',
@@ -197,16 +201,26 @@ const BUS_TEAM_ROLES = [
 ] as const;
 
 type BusEventType = 'assembleia' | 'congresso';
+type PassengerListFilter = 'paid' | 'unpaid' | 'all';
 
 const EVENT_TITLE: Record<BusEventType, string> = {
   assembleia: 'Assembleia de Circuito',
   congresso: 'Congresso',
 };
 
+const LIST_FILTER_LABEL: Record<PassengerListFilter, string> = {
+  paid: 'Quem pagou',
+  unpaid: 'Não pagou / em aberto',
+  all: 'Todos os passageiros',
+};
+
 /** new Date('YYYY-MM-DD') é interpretado como UTC e pode mostrar o dia anterior no Brasil. */
-const parseLocalDate = (iso: string): Date => {
-  const [year, month, day] = (iso || '').slice(0, 10).split('-').map(Number);
-  return new Date(year, (month || 1) - 1, day || 1, 12);
+const parseLocalDate = (iso: string): Date => parseDateOnly(iso);
+
+/** Data de hoje no fuso local: toISOString() pode devolver o dia seguinte à noite. */
+const todayLocalISO = (): string => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
 const formatDayBR = (iso: string): string => {
@@ -286,6 +300,7 @@ interface LedgerEntry {
   person: string;
   participantId?: string;
   paymentId?: string;
+  donationId?: string;
   refundId?: string;
   transferId?: string;
   depositId?: string;
@@ -381,8 +396,22 @@ export function BusArrangementView() {
     method: 'dinheiro',
     receivedById: '',
   });
+  const [paymentsTarget, setPaymentsTarget] = useState<BusParticipant | null>(null);
+  const [removePaymentId, setRemovePaymentId] = useState<string | null>(null);
+  const [listFilter, setListFilter] = useState<PassengerListFilter>('paid');
+
+  // Donativo: lançamento livre, sem vínculo com assento nem saldo de passageiro.
+  const [donationOpen, setDonationOpen] = useState(false);
+  const [donationForm, setDonationForm] = useState<{
+    amount: string;
+    method: BusPaymentMethod;
+    receivedById: string;
+    donorName: string;
+  }>({ amount: '', method: 'dinheiro', receivedById: '', donorName: '' });
+  const [donationToRemove, setDonationToRemove] = useState<string | null>(null);
 
   const [desistTarget, setDesistTarget] = useState<BusParticipant | null>(null);
+  const [reactivateTarget, setReactivateTarget] = useState<BusParticipant | null>(null);
 
   const [depositOpen, setDepositOpen] = useState(false);
   const [depForm, setDepForm] = useState<{ bankRef: string; photo: string; processing: boolean }>({
@@ -727,7 +756,7 @@ export function BusArrangementView() {
   const openNewArrangement = () => {
     setForm({
       eventType: 'assembleia',
-      date: new Date().toISOString().slice(0, 10),
+      date: todayLocalISO(),
       seats: 44,
       busTotal: 0,
       seatPrice: 0,
@@ -787,7 +816,7 @@ export function BusArrangementView() {
       const payload = {
         title: EVENT_TITLE[form.eventType],
         eventType: form.eventType,
-        date: form.date || new Date().toISOString().slice(0, 10),
+        date: form.date || todayLocalISO(),
         seats: Number(form.seats),
         busTotal: Number(form.busTotal) || 0,
         seatPrice: Number(form.seatPrice) || 0,
@@ -1046,13 +1075,31 @@ export function BusArrangementView() {
     }
   };
 
-  const downloadPassengerList = async (mode: 'download' | 'print') => {
+  const listCounts = useMemo<Record<PassengerListFilter, number>>(() => {
+    const active = participants.filter((p) => p.status !== 'desistente');
+    return {
+      all: active.length,
+      paid: active.filter((p) => participantPaid(p) > 0).length,
+      unpaid: active.filter(
+        (p) => participantBalance(p, selected?.seatPrice ?? 0) > 0.005,
+      ).length,
+    };
+  }, [participants, selected?.seatPrice]);
+
+  const downloadPassengerList = async (
+    mode: 'download' | 'print',
+    filter: PassengerListFilter = listFilter,
+  ) => {
     if (!selected) return;
-    const payers = participants.filter(
-      (p) => p.status !== 'desistente' && participantPaid(p) > 0,
-    );
-    if (!payers.length) {
-      toast.info('Nenhum participante pagou ainda.');
+    // Desistentes nunca vão na lista enviada à empresa de ônibus.
+    const active = participants.filter((p) => p.status !== 'desistente');
+    const listed = active.filter((p) => {
+      if (filter === 'paid') return participantPaid(p) > 0;
+      if (filter === 'unpaid') return participantBalance(p, selected.seatPrice) > 0.005;
+      return true;
+    });
+    if (!listed.length) {
+      toast.info(`Nenhum passageiro na lista "${LIST_FILTER_LABEL[filter]}".`);
       return;
     }
     const publisherById = new Map(publishers.map((p) => [p.id, p]));
@@ -1061,9 +1108,10 @@ export function BusArrangementView() {
       congregationAddress: settings.address,
       congregationNumber: settings.congregationNumber,
       arrangementTitle: selected.title,
+      scopeLabel: LIST_FILTER_LABEL[filter],
       sheets: passengerListDays(selected),
       generatedAt: new Date().toISOString(),
-      passengers: payers.map((p) => ({
+      passengers: listed.map((p) => ({
         name: p.name,
         cpf: p.cpf || publisherById.get(p.publisherId || '')?.cpf || '',
         phone: p.phone,
@@ -1075,7 +1123,7 @@ export function BusArrangementView() {
       if (mode === 'print') openPDFForPrint(bytes);
       else downloadPDF(bytes, busPassengerListFileName(data));
       toast.success(
-        `Lista com ${payers.length} passageiro(s) em ${data.sheets.length} dia(s) gerada.`,
+        `${LIST_FILTER_LABEL[filter]}: ${listed.length} passageiro(s) em ${data.sheets.length} dia(s).`,
       );
     } catch (error) {
       console.error(error);
@@ -1088,6 +1136,11 @@ export function BusArrangementView() {
   const openPayment = (participant: BusParticipant) => {
     if (!canEdit) return;
     const balance = participantBalance(participant, selected?.seatPrice ?? 0);
+    if (balance <= 0.005) {
+      // Trava: quitado nunca lança PAG; o valor extra segue como donativo.
+      openDonation(participant);
+      return;
+    }
     const meAsReceiver = [...responsibleOptions.collector, ...responsibleOptions.depositor].find(
       (option) =>
         option.id === user?.uid || (user ? loginMatchesPublisher(user, option.publisher) : false),
@@ -1107,6 +1160,16 @@ export function BusArrangementView() {
     const amount = parseMoney(payForm.amount);
     if (!amount || amount <= 0) {
       toast.error('Informe um valor válido.');
+      return;
+    }
+    const remaining = participantBalance(paymentTarget, selected.seatPrice);
+    if (remaining <= 0.005) {
+      toast.error('Este participante já quitou. Remova um pagamento para lançar outro valor.');
+      setPaymentTarget(null);
+      return;
+    }
+    if (amount > remaining + 0.005) {
+      toast.error(`Valor acima do saldo devido (${formatBRL(remaining)}).`);
       return;
     }
     const receivedById =
@@ -1158,6 +1221,140 @@ export function BusArrangementView() {
       toast.error('Não foi possível registrar o pagamento.', { duration: 8000 });
     } finally {
       setSaving(false);
+    }
+  };
+
+  // ===== Donativos =====
+
+  /** Abre o lançamento de donativo; ao virar do botão de quem quitou, sugere o nome. */
+  const openDonation = (participant?: BusParticipant) => {
+    if (!canEdit) return;
+    const meAsReceiver = [...responsibleOptions.collector, ...responsibleOptions.depositor].find(
+      (option) =>
+        option.id === user?.uid || (user ? loginMatchesPublisher(user, option.publisher) : false),
+    );
+    setDonationForm({
+      amount: '',
+      method: 'dinheiro',
+      receivedById: meAsReceiver?.id || selected?.collectorId || receiverOptions[0]?.id || '',
+      donorName: participant?.name || '',
+    });
+    setDonationOpen(true);
+  };
+
+  const registerDonation = async () => {
+    if (!selected) return;
+    const amount = parseMoney(donationForm.amount);
+    if (!amount || amount <= 0) {
+      toast.error('Informe um valor válido para o donativo.');
+      return;
+    }
+    const receivedById =
+      donationForm.receivedById || selected.collectorId || receiverOptions[0]?.id || user?.uid || '';
+    const receivedByName = receiverName(receivedById) || selected.collectorName || 'Responsável';
+    const donorName = donationForm.donorName.trim();
+    const authCode = generateAuthCode();
+    const issuedAt = new Date().toISOString();
+
+    setSaving(true);
+    try {
+      const receiptNo = await reserveReceiptNo('DON');
+      const donation: BusDonation = {
+        id: createId(),
+        date: issuedAt,
+        amount,
+        method: donationForm.method,
+        receiptNo,
+        authCode,
+        receivedById,
+        receivedByName,
+        ...(donorName ? { donorName } : {}),
+      };
+      await saveArrangement({ donations: [...(selected.donations ?? []), donation] });
+      setReceipt(
+        buildReceipt('DON', {
+          receiptNo,
+          authCode,
+          amount,
+          issuedAt,
+          participantName: donorName || 'Doador anônimo',
+          receivedByName,
+          methodLabel: PAYMENT_METHOD_LABEL[donationForm.method],
+          note: 'Donativo para o custo do onibus - nao vinculado a passageiro.',
+        }),
+      );
+      setDonationOpen(false);
+      toast.success(`Donativo registrado — ${receiptNo}`);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'bus_arrangements');
+      toast.error('Não foi possível registrar o donativo.', { duration: 8000 });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /** Mesmo padrão dos pagamentos: cancela o donativo sem apagar o recibo. */
+  const removeDonation = async (donationId: string) => {
+    if (!selected || !canEdit) return;
+    const donation = (selected.donations ?? []).find((d) => d.id === donationId);
+    if (!donation || donation.canceled) return;
+    const nextDonations = (selected.donations ?? []).map((d) =>
+      d.id === donationId
+        ? {
+            ...d,
+            canceled: {
+              at: new Date().toISOString(),
+              reason: 'Donativo removido',
+              byName: user?.displayName || 'Responsável',
+            },
+          }
+        : d,
+    );
+    try {
+      await saveArrangement({ donations: nextDonations });
+      setDonationToRemove(null);
+      toast.success('Donativo cancelado. Valor removido do caixa e do arrecadado.');
+    } catch {
+      // saveArrangement já exibiu o motivo da falha.
+    }
+  };
+
+  /**
+   * Cancelamento lógico do recebimento: o recibo continua no histórico (com
+   * número reservado), mas deixa de contar no total pago, no saldo e no caixa.
+   */
+  const removePayment = async (participantId: string, paymentId: string) => {
+    if (!selected || !canEdit || saving) return;
+    const participant = participants.find((p) => p.id === participantId);
+    const payment = participant?.payments?.find((p) => p.id === paymentId);
+    if (!participant || !payment || payment.canceled) return;
+
+    const nextParticipants = participants.map((p) =>
+      p.id === participantId
+        ? {
+            ...p,
+            payments: (p.payments ?? []).map((pay) =>
+              pay.id === paymentId
+                ? {
+                    ...pay,
+                    canceled: {
+                      at: new Date().toISOString(),
+                      reason: 'Recebimento removido (duplicado ou valor incorreto)',
+                      byName: user?.displayName || 'Responsável',
+                    },
+                  }
+                : pay,
+            ),
+          }
+        : p,
+    );
+
+    try {
+      await saveArrangement({ participants: nextParticipants });
+      setRemovePaymentId(null);
+      toast.success('Pagamento removido. Saldo e caixa recalculados.');
+    } catch {
+      // saveArrangement já exibiu o motivo da falha.
     }
   };
 
@@ -1234,6 +1431,42 @@ export function BusArrangementView() {
     }
   };
 
+  /** Volta um desistente para a lista, cancelando lançamentos feitos como teste. */
+  const reactivateParticipant = async () => {
+    if (!selected || !canEdit || !reactivateTarget) return;
+    const targetId = reactivateTarget.id;
+    const at = new Date().toISOString();
+    const nextParticipants = participants.map((p) =>
+      p.id === targetId
+        ? {
+            ...p,
+            status: 'ativo' as const,
+            retained: false,
+            payments: (p.payments ?? []).map((pay) =>
+              pay.canceled
+                ? pay
+                : {
+                    ...pay,
+                    canceled: {
+                      at,
+                      reason: 'Participante reativado - lancamento de teste',
+                      byName: user?.displayName || 'Responsável',
+                    },
+                  },
+            ),
+            refunds: [],
+          }
+        : p,
+    );
+    try {
+      await saveArrangement({ participants: nextParticipants });
+      setReactivateTarget(null);
+      toast.success('Participante reativado. Saldo e caixa recalculados.');
+    } catch {
+      // saveArrangement já exibiu o motivo da falha.
+    }
+  };
+
   // ===== Repasses e depósitos =====
 
   const registerTransfer = async (entry: HandsEntry) => {
@@ -1251,8 +1484,10 @@ export function BusArrangementView() {
     const toName = receiverName(toId) || selected.depositorName || 'Depositante';
 
     const alreadyCovered = new Set((selected.transfers ?? []).flatMap((t) => t.coveredPayments ?? []));
-    const coveredPayments = participants
-      .flatMap((p) => p.payments ?? [])
+    const coveredPayments = [
+      ...participants.flatMap((p) => p.payments ?? []),
+      ...(selected.donations ?? []),
+    ]
       .filter((pay) => !pay.canceled && pay.receivedById === entry.id && !alreadyCovered.has(pay.receiptNo))
       .map((pay) => pay.receiptNo);
 
@@ -1429,6 +1664,19 @@ export function BusArrangementView() {
       });
     });
 
+    (selected.donations ?? []).forEach((donation) => {
+      entries.push({
+        kind: 'DON',
+        receiptNo: donation.receiptNo,
+        authCode: donation.authCode,
+        date: donation.date,
+        amount: donation.amount,
+        person: donation.donorName ? `Donativo · ${donation.donorName}` : 'Donativo',
+        donationId: donation.id,
+        canceled: Boolean(donation.canceled),
+      });
+    });
+
     (selected.transfers ?? []).forEach((transfer) => {
       entries.push({
         kind: 'REP',
@@ -1473,6 +1721,28 @@ export function BusArrangementView() {
           methodLabel: PAYMENT_METHOD_LABEL[payment.method],
           totalPaid: participantPaid(participant),
           balance: participantBalance(participant, selected.seatPrice),
+          note: payment.canceled
+            ? 'RECIBO CANCELADO - nao considerar no total pago.'
+            : undefined,
+        }),
+      );
+      return;
+    }
+    if (entry.kind === 'DON') {
+      const donation = (selected.donations ?? []).find((d) => d.id === entry.donationId);
+      if (!donation) return;
+      setReceipt(
+        buildReceipt('DON', {
+          receiptNo: donation.receiptNo,
+          authCode: donation.authCode,
+          amount: donation.amount,
+          issuedAt: donation.date,
+          participantName: donation.donorName || 'Doador anônimo',
+          receivedByName: donation.receivedByName,
+          methodLabel: PAYMENT_METHOD_LABEL[donation.method],
+          note: donation.canceled
+            ? 'RECIBO CANCELADO - nao considerar no arrecadado.'
+            : 'Donativo para o custo do onibus - nao vinculado a passageiro.',
         }),
       );
       return;
@@ -1572,10 +1842,20 @@ export function BusArrangementView() {
               </option>
             ))}
           </select>
+          <select
+            value={listFilter}
+            onChange={(e) => setListFilter(e.target.value as PassengerListFilter)}
+            title="Qual lista de passageiros gerar"
+            className="h-9 rounded-lg border border-[#1E293B] bg-[#0F172A] px-2 text-[11px] font-bold text-[#94A3B8]"
+          >
+            <option value="paid">Quem pagou ({listCounts.paid})</option>
+            <option value="unpaid">Não pagou / em aberto ({listCounts.unpaid})</option>
+            <option value="all">Todos ({listCounts.all})</option>
+          </select>
           <Button
             variant="outline"
             onClick={() => downloadPassengerList('download')}
-            title="Lista dos passageiros que já pagou, com check de ida e volta"
+            title={`Gerar PDF: ${LIST_FILTER_LABEL[listFilter]} — com check de ida e volta`}
             className="h-9 gap-2 border-[#1E293B] text-[11px] font-bold text-[#94A3B8] hover:text-white"
           >
             <FileText className="h-4 w-4" /> Lista PDF
@@ -1627,7 +1907,16 @@ export function BusArrangementView() {
           <SummaryCard
             label="Arrecadado"
             value={formatBRL(summary.netCashed)}
-            hint={`${summary.missingFromParticipants > 0 ? `a receber ${formatBRL(summary.missingFromParticipants)}` : 'tudo recebido'}`}
+            hint={[
+              summary.donatedTotal > 0
+                ? `inclui ${formatBRL(summary.donatedTotal)} em donativos`
+                : '',
+              summary.missingFromParticipants > 0
+                ? `a receber ${formatBRL(summary.missingFromParticipants)}`
+                : 'tudo recebido',
+            ]
+              .filter(Boolean)
+              .join(' · ')}
           />
           <SummaryCard
             label="Em mãos"
@@ -1876,13 +2165,36 @@ export function BusArrangementView() {
                     </td>
                     <td className="px-3 py-2">
                       <div className="flex justify-end gap-1">
-                        {canEdit && !inactive && (
+                        {(participant.payments?.filter((pay) => !pay.canceled).length ?? 0) > 0 && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setPaymentsTarget(participant);
+                              setRemovePaymentId(null);
+                            }}
+                            className="h-7 border-[#1E293B] text-[10px] font-bold text-[#94A3B8] hover:text-white"
+                          >
+                            Pagamentos ({participant.payments?.filter((pay) => !pay.canceled).length ?? 0})
+                          </Button>
+                        )}
+                        {canEdit && !inactive && balance > 0.005 && (
                           <Button
                             size="sm"
                             onClick={() => openPayment(participant)}
                             className="h-7 bg-[#0EA5E9] text-[10px] font-bold text-white hover:bg-[#0284C7]"
                           >
                             Receber
+                          </Button>
+                        )}
+                        {canEdit && !inactive && balance <= 0.005 && (
+                          <Button
+                            size="sm"
+                            onClick={() => openDonation(participant)}
+                            title="Já quitou. Para ajudar com um valor extra, lance como donativo: entra no custo do ônibus, mas não vira crédito para a pessoa."
+                            className="h-7 border border-emerald-500/40 bg-emerald-500/10 text-[10px] font-bold text-emerald-300 hover:bg-emerald-500/20"
+                          >
+                            Donativo
                           </Button>
                         )}
                         {canEdit && !inactive && (
@@ -1895,11 +2207,55 @@ export function BusArrangementView() {
                             Desistiu
                           </Button>
                         )}
+                        {canEdit && inactive && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setReactivateTarget(participant)}
+                            className="h-7 border-[#0EA5E9]/40 text-[10px] font-bold text-[#0EA5E9] hover:bg-[#0EA5E9]/10"
+                          >
+                            Reativar
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>
                 );
               })}
+              {(summary?.donatedTotal ?? 0) > 0 && (
+                <tr className="border-b border-[#1E293B]/60 bg-emerald-500/5 last:border-0">
+                  <td className="px-3 py-2">
+                    <p className="font-medium text-emerald-300">Donativos</p>
+                    <span className="text-[9px] font-bold uppercase text-[#64748B]">
+                      fora do rateio · sem assento
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 text-[#64748B]">—</td>
+                  <td className="px-3 py-2 font-bold text-emerald-300">
+                    {formatBRL(summary?.donatedTotal ?? 0)}
+                  </td>
+                  <td className="px-3 py-2 text-[#64748B]">—</td>
+                  <td className="px-3 py-2">
+                    <span className="rounded bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold uppercase text-emerald-400">
+                      Arrecadado
+                    </span>
+                  </td>
+                  <td className="px-3 py-2">
+                    <div className="flex justify-end gap-1">
+                      {canEdit && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openDonation()}
+                          className="h-7 border-emerald-500/40 text-[10px] font-bold text-emerald-300 hover:bg-emerald-500/10"
+                        >
+                          Donativo
+                        </Button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
           {!participants.length && (
@@ -1918,14 +2274,18 @@ export function BusArrangementView() {
               <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-[#64748B]">Em mãos</p>
               <div className="space-y-2">
                 {hands.map((entry) => {
-                  const received = participants.reduce(
-                    (sum, participant) =>
-                      sum +
-                      (participant.payments ?? [])
-                        .filter((pay) => !pay.canceled && pay.receivedById === entry.id)
-                        .reduce((total, pay) => total + (pay.amount || 0), 0),
-                    0,
-                  );
+                  const received =
+                    participants.reduce(
+                      (sum, participant) =>
+                        sum +
+                        (participant.payments ?? [])
+                          .filter((pay) => !pay.canceled && pay.receivedById === entry.id)
+                          .reduce((total, pay) => total + (pay.amount || 0), 0),
+                      0,
+                    ) +
+                    (selected?.donations ?? [])
+                      .filter((pay) => !pay.canceled && pay.receivedById === entry.id)
+                      .reduce((total, pay) => total + (pay.amount || 0), 0);
                   const roles: string[] = [];
                   if (received > 0.005) roles.push(`recebeu ${formatBRL(received)}`);
                   if (entry.id === selected?.depositorId) roles.push('deposita no banco');
@@ -1955,13 +2315,22 @@ export function BusArrangementView() {
                 })}
               </div>
               {canEdit && (
-                <Button
-                  onClick={openDeposit}
-                  variant="outline"
-                  className="mt-3 h-9 w-full gap-2 border-[#1E293B] text-[11px] font-bold text-[#94A3B8] hover:text-white"
-                >
-                  <Upload className="h-4 w-4" /> Registrar depósito
-                </Button>
+                <div className="mt-3 flex gap-2">
+                  <Button
+                    onClick={() => openDonation()}
+                    variant="outline"
+                    className="h-9 flex-1 gap-2 border-emerald-500/40 text-[11px] font-bold text-emerald-300 hover:bg-emerald-500/10"
+                  >
+                    <HeartHandshake className="h-4 w-4" /> Registrar donativo
+                  </Button>
+                  <Button
+                    onClick={openDeposit}
+                    variant="outline"
+                    className="h-9 flex-1 gap-2 border-[#1E293B] text-[11px] font-bold text-[#94A3B8] hover:text-white"
+                  >
+                    <Upload className="h-4 w-4" /> Registrar depósito
+                  </Button>
+                </div>
               )}
             </div>
 
@@ -2003,6 +2372,26 @@ export function BusArrangementView() {
                           className="text-[#0EA5E9]"
                         >
                           <FileImage className="h-3.5 w-3.5" />
+                        </span>
+                      )}
+                      {entry.kind === 'DON' && entry.donationId && !entry.canceled && canEdit && (
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          title="Cancelar donativo"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDonationToRemove(entry.donationId!);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.stopPropagation();
+                              setDonationToRemove(entry.donationId!);
+                            }
+                          }}
+                          className="text-red-400 hover:text-red-300"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
                         </span>
                       )}
                       <Printer className="h-3.5 w-3.5 text-[#64748B]" />
@@ -2297,6 +2686,243 @@ export function BusArrangementView() {
         </DialogContent>
       </Dialog>
 
+      {/* ===== Diálogo: donativo ===== */}
+      <Dialog open={donationOpen} onOpenChange={(open) => !open && setDonationOpen(false)}>
+        <DialogContent className="bg-[#0F172A] sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-white">Registrar donativo</DialogTitle>
+          </DialogHeader>
+          <p className="text-[11px] leading-relaxed text-[#94A3B8]">
+            Valor extra para o custo do ônibus. Não é cobrado de nenhum passageiro e não gera
+            saldo nem crédito para ninguém.
+          </p>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-[10px] font-bold uppercase tracking-widest text-[#64748B]">
+                Valor do donativo (R$)
+              </Label>
+              <Input
+                value={donationForm.amount}
+                onChange={(e) =>
+                  setDonationForm((prev) => ({ ...prev, amount: formatMoneyInput(e.target.value) }))
+                }
+                inputMode="decimal"
+                placeholder="0,00"
+                className="mt-1 border-[#1E293B] bg-[#0B1220] text-xs text-white"
+              />
+            </div>
+            <div>
+              <Label className="text-[10px] font-bold uppercase tracking-widest text-[#64748B]">
+                Doador (opcional)
+              </Label>
+              <Input
+                value={donationForm.donorName}
+                onChange={(e) =>
+                  setDonationForm((prev) => ({ ...prev, donorName: e.target.value }))
+                }
+                placeholder="Quem está ajudando"
+                className="mt-1 border-[#1E293B] bg-[#0B1220] text-xs text-white"
+              />
+              <p className="mt-1 text-[10px] text-[#64748B]">
+                Em branco, o recibo mostra “Doador anônimo”.
+              </p>
+            </div>
+            <div>
+              <Label className="text-[10px] font-bold uppercase tracking-widest text-[#64748B]">
+                Forma
+              </Label>
+              <select
+                value={donationForm.method}
+                onChange={(e) =>
+                  setDonationForm((prev) => ({ ...prev, method: e.target.value as BusPaymentMethod }))
+                }
+                className="mt-1 h-8 w-full rounded-lg border border-[#1E293B] bg-[#0B1220] px-2 text-xs text-white"
+              >
+                {Object.entries(PAYMENT_METHOD_LABEL).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label className="text-[10px] font-bold uppercase tracking-widest text-[#64748B]">
+                Quem recebeu
+              </Label>
+              <select
+                value={donationForm.receivedById}
+                onChange={(e) =>
+                  setDonationForm((prev) => ({ ...prev, receivedById: e.target.value }))
+                }
+                className="mt-1 h-8 w-full rounded-lg border border-[#1E293B] bg-[#0B1220] px-2 text-xs text-white"
+              >
+                {receiverOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
+                ))}
+                {donationForm.receivedById &&
+                  !receiverOptions.some((option) => option.id === donationForm.receivedById) && (
+                    <option value={donationForm.receivedById}>
+                      {receiverName(donationForm.receivedById) || 'Responsável'}
+                    </option>
+                  )}
+              </select>
+            </div>
+          </div>
+          <DialogFooter className="border-[#1E293B] bg-transparent">
+            <Button
+              variant="outline"
+              onClick={() => setDonationOpen(false)}
+              className="h-9 border-[#1E293B] text-xs font-bold text-[#94A3B8]"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={registerDonation}
+              disabled={saving}
+              className="h-9 bg-emerald-600 text-xs font-bold text-white hover:bg-emerald-700"
+            >
+              Confirmar donativo
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ===== Diálogo: cancelar donativo ===== */}
+      <Dialog
+        open={Boolean(donationToRemove)}
+        onOpenChange={(open) => !open && setDonationToRemove(null)}
+      >
+        <DialogContent className="bg-[#0F172A] sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-white">Cancelar donativo?</DialogTitle>
+          </DialogHeader>
+          <p className="text-xs leading-relaxed text-[#94A3B8]">
+            O valor sai do arrecadado e do caixa. O recibo fica no histórico, riscado e com a
+            observação “RECIBO CANCELADO”.
+          </p>
+          <DialogFooter className="border-[#1E293B] bg-transparent">
+            <Button
+              variant="outline"
+              onClick={() => setDonationToRemove(null)}
+              className="h-9 border-[#1E293B] text-xs font-bold text-[#94A3B8]"
+            >
+              Voltar
+            </Button>
+            <Button
+              onClick={() => removeDonation(donationToRemove!)}
+              disabled={saving}
+              className="h-9 bg-red-600 text-xs font-bold text-white hover:bg-red-700"
+            >
+              Confirmar cancelamento
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ===== Diálogo: pagamentos do participante ===== */}
+      {(() => {
+        if (!paymentsTarget) return null;
+        const current = participants.find((p) => p.id === paymentsTarget.id);
+        const payments = [...(current?.payments ?? paymentsTarget.payments ?? [])].sort(
+          (a, b) => (b.date || '').localeCompare(a.date || ''),
+        );
+        return (
+          <Dialog
+            open
+            onOpenChange={(open) => {
+              if (!open) {
+                setPaymentsTarget(null);
+                setRemovePaymentId(null);
+              }
+            }}
+          >
+            <DialogContent className="bg-[#0F172A] sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="text-white">
+                  Pagamentos de {current?.name || paymentsTarget.name}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="max-h-[340px] space-y-2 overflow-y-auto pr-1">
+                {payments.map((pay) => (
+                  <div key={pay.id} className="rounded-lg border border-[#1E293B] bg-[#0B1220] p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p
+                          className={`text-xs font-bold ${pay.canceled ? 'text-[#64748B] line-through' : 'text-white'}`}
+                        >
+                          {pay.receiptNo} · {formatBRL(pay.amount)}
+                        </p>
+                        <p className="text-[10px] text-[#64748B]">
+                          {formatDateTimeBR(pay.date)} · {PAYMENT_METHOD_LABEL[pay.method]}
+                        </p>
+                        <p className="text-[10px] text-[#64748B]">
+                          Recebido por {pay.receivedByName || 'Responsável'}
+                        </p>
+                      </div>
+                      {pay.canceled ? (
+                        <span className="rounded bg-[#1E293B] px-2 py-1 text-[9px] font-bold uppercase text-[#64748B]">
+                          Removido
+                        </span>
+                      ) : canEdit ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setRemovePaymentId(pay.id)}
+                          className="h-7 border-red-900/60 text-[10px] font-bold text-red-400 hover:text-red-300"
+                        >
+                          Remover
+                        </Button>
+                      ) : null}
+                    </div>
+                    {removePaymentId === pay.id && (
+                      <div className="mt-3 rounded-lg border border-red-900/60 bg-red-950/30 p-3">
+                        <p className="text-[11px] leading-relaxed text-[#FCA5A5]">
+                          Remover este recebimento? O valor sai do total pago e do caixa. O recibo
+                          fica cancelado no histórico. Se o dinheiro já foi repassado ou depositado,
+                          confira o caixa depois.
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => removePayment(paymentsTarget.id, pay.id)}
+                            disabled={saving}
+                            className="h-7 bg-red-600 text-[10px] font-bold text-white hover:bg-red-700"
+                          >
+                            Confirmar remoção
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setRemovePaymentId(null)}
+                            className="h-7 text-[10px] text-[#94A3B8]"
+                          >
+                            Voltar
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <DialogFooter className="border-[#1E293B] bg-transparent">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setPaymentsTarget(null);
+                    setRemovePaymentId(null);
+                  }}
+                  className="h-9 border-[#1E293B] text-xs font-bold text-[#94A3B8]"
+                >
+                  Fechar
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        );
+      })()}
+
       {/* ===== Diálogo: desistência ===== */}
       <Dialog open={Boolean(desistTarget)} onOpenChange={(open) => !open && setDesistTarget(null)}>
         <DialogContent className="bg-[#0F172A] sm:max-w-md">
@@ -2335,6 +2961,41 @@ export function BusArrangementView() {
             )}
             <Button variant="ghost" onClick={() => setDesistTarget(null)} className="h-9 w-full text-xs text-[#64748B]">
               Cancelar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ===== Diálogo: reativar participante ===== */}
+      <Dialog
+        open={Boolean(reactivateTarget)}
+        onOpenChange={(open) => !open && setReactivateTarget(null)}
+      >
+        <DialogContent className="bg-[#0F172A] sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-white">
+              Reativar {reactivateTarget?.name}?
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-xs leading-relaxed text-[#94A3B8]">
+            Ele volta para a lista como participante ativo. Os recebimentos dele serão
+            cancelados e as devoluções removidas; o saldo passa a ser o valor normal do
+            assento, sem crédito de teste. Os recibos cancelados continuam no histórico.
+          </p>
+          <DialogFooter className="border-[#1E293B] bg-transparent">
+            <Button
+              variant="outline"
+              onClick={() => setReactivateTarget(null)}
+              className="h-9 border-[#1E293B] text-xs font-bold text-[#94A3B8]"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={reactivateParticipant}
+              disabled={saving}
+              className="h-9 bg-[#0EA5E9] text-xs font-bold text-white hover:bg-[#0284C7]"
+            >
+              Reativar
             </Button>
           </DialogFooter>
         </DialogContent>

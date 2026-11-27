@@ -158,6 +158,15 @@ export interface BusPayment {
   canceled?: BusCancelMark;
 }
 
+/**
+ * Donativo (série DON): valor para o custo do ônibus que não pertence a nenhum
+ * assento. Reusa BusPayment para manter recibo, forma e cancelamento lógico.
+ */
+export interface BusDonation extends BusPayment {
+  /** Quem doou, quando informado. Não é participante do arranjo. */
+  donorName?: string;
+}
+
 /** Devolução de valor a um participante que desistiu (série DEV) */
 export interface BusRefund {
   id: string;
@@ -220,8 +229,10 @@ export interface BusArrangement {
   depositorId?: string;
   depositorName?: string;
   participants: BusParticipant[];
+  /** Doações livres para o custo do ônibus, sem vínculo com assento. */
+  donations?: BusDonation[];
   transfers: BusTransfer[];
-  /** Sequenciais por série: PAG, REP, DEP, DEV */
+  /** Sequenciais por série: PAG, DON, REP, DEP, DEV */
   counters?: Record<string, number>;
   createdAt?: string;
   updatedAt?: string;

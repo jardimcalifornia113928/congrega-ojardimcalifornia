@@ -12,9 +12,20 @@ export const formatBRL = (value: number): string =>
     currency: 'BRL',
   });
 
+/**
+ * `new Date('YYYY-MM-DD')` é interpretado como UTC e, no Brasil, mostra o dia
+ * anterior. Datas de formulário (`type="date"`) são locais: montar com as partes
+ * evita o deslocamento de fuso. Meio-dia também protege contra DST.
+ */
+export const parseDateOnly = (iso: string): Date => {
+  const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!parts) return new Date(iso);
+  return new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]), 12);
+};
+
 export const formatDateBR = (iso?: string): string => {
   if (!iso) return '—';
-  const d = new Date(iso);
+  const d = parseDateOnly(iso);
   if (Number.isNaN(d.getTime())) return '—';
   return d.toLocaleDateString('pt-BR');
 };
@@ -59,7 +70,7 @@ export const generateAuthCode = (): string => {
   return `${chars.slice(0, 3).join('')}-${chars.slice(3).join('')}`;
 };
 
-export type ReceiptPrefix = 'PAG' | 'REP' | 'DEP' | 'DEV';
+export type ReceiptPrefix = 'PAG' | 'DON' | 'REP' | 'DEP' | 'DEV';
 
 /** Sequencial por arranjo e por série: PAG-26-0001 */
 export const nextReceiptNo = (
@@ -162,6 +173,13 @@ export const computeHands = (
     });
   });
 
+  // Donativo entra no caixa de quem recebeu, mas não é dívida de passageiro.
+  (arrangement.donations ?? []).forEach((donation) => {
+    if (donation.canceled) return;
+    const entry = ensure(donation.receivedById, donation.receivedByName);
+    if (entry) entry.amount = round2(entry.amount + (donation.amount || 0));
+  });
+
   (arrangement.transfers ?? []).forEach((transfer) => {
     const from = ensure(transfer.fromId, transfer.fromName);
     const to = ensure(transfer.toId, transfer.toName);
@@ -190,6 +208,8 @@ export interface BusSummary {
   seatPrice: number;
   dueTotal: number;
   paidTotal: number;
+  /** Parte de paidTotal que veio de donativos (sem assento vinculado). */
+  donatedTotal: number;
   refundedTotal: number;
   netCashed: number;
   depositedTotal: number;
@@ -208,7 +228,16 @@ export const summarize = (arrangement: BusArrangement, deposits: BusDeposit[]): 
   const seatPrice = arrangement.seatPrice || 0;
 
   const dueTotal = active.reduce((sum, p) => sum + participantDue(p, seatPrice), 0);
-  const paidTotal = participants.reduce((sum, p) => sum + participantPaid(p), 0);
+  const donatedTotal = round2(
+    (arrangement.donations ?? [])
+      .filter((d) => !d.canceled)
+      .reduce((sum, d) => sum + (d.amount || 0), 0),
+  );
+  // Arrecadado inclui donativo para abater o custo do ônibus. A dívida e o
+  // crédito dos participantes continuam calculados só com os pagamentos deles.
+  const paidTotal = round2(
+    participants.reduce((sum, p) => sum + participantPaid(p), 0) + donatedTotal,
+  );
   const refundedTotal = participants.reduce((sum, p) => sum + participantRefunded(p), 0);
   const missingFromParticipants = active.reduce(
     (sum, p) => sum + Math.max(0, participantBalance(p, seatPrice)),
@@ -235,7 +264,8 @@ export const summarize = (arrangement: BusArrangement, deposits: BusDeposit[]): 
     busTotal: arrangement.busTotal || 0,
     seatPrice,
     dueTotal: round2(dueTotal),
-    paidTotal: round2(paidTotal),
+    paidTotal,
+    donatedTotal,
     refundedTotal: round2(refundedTotal),
     netCashed,
     depositedTotal: round2(depositedTotal),

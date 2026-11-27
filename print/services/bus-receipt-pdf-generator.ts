@@ -1,7 +1,7 @@
 import { PDFDocument, rgb, StandardFonts, type PDFFont, type PDFPage } from 'pdf-lib';
 import qrcode from 'qrcode-generator';
 
-export type BusReceiptKind = 'PAG' | 'REP' | 'DEP' | 'DEV';
+export type BusReceiptKind = 'PAG' | 'DON' | 'REP' | 'DEP' | 'DEV';
 
 export interface BusReceiptData {
   kind: BusReceiptKind;
@@ -45,6 +45,7 @@ const LINE = rgb(0.85, 0.88, 0.92);
 
 const TITLES: Record<BusReceiptKind, string> = {
   PAG: 'RECIBO DE PAGAMENTO',
+  DON: 'RECIBO DE DONATIVO',
   REP: 'RECIBO DE REPASSE',
   DEP: 'COMPROVANTE DE DEPÓSITO',
   DEV: 'COMPROVANTE DE DEVOLUÇÃO',
@@ -243,6 +244,10 @@ export async function generateBusReceiptPDF(data: BusReceiptData): Promise<Uint8
         return `Recebemos de ${data.participantName || '-'} a importância de ${formatBRL(
           data.amount,
         )} referente ao arranjo de ônibus ${data.arrangementTitle}.`;
+      case 'DON':
+        return `Recebemos de ${data.participantName || 'Doador anônimo'} a importância de ${formatBRL(
+          data.amount,
+        )} a título de donativo para o arranjo de ônibus ${data.arrangementTitle}, sem vínculo com assento ou passageiro.`;
       case 'REP':
         return `Repasse integral dos valores recebidos no arranjo ${data.arrangementTitle}, entregues por ${
           data.fromName || '-'
@@ -273,6 +278,11 @@ export async function generateBusReceiptPDF(data: BusReceiptData): Promise<Uint8
     details.push(['Total pago até agora', formatBRL(data.totalPaid ?? data.amount)]);
     details.push(['Saldo restante', formatBRL(data.balance ?? 0)]);
     if (data.participantPhone) details.push(['Contato', data.participantPhone]);
+  } else if (data.kind === 'DON') {
+    details.push(['Recebido por', data.receivedByName || '-']);
+    details.push(['Forma de pagamento', data.methodLabel || '-']);
+    details.push(['Doador', data.participantName || 'Doador anônimo']);
+    details.push(['Observação', data.note || 'Donativo para o custo do ônibus']);
   } else if (data.kind === 'REP') {
     details.push(['Entregue por', data.fromName || '-']);
     details.push(['Recebido por', data.toName || '-']);
@@ -343,7 +353,7 @@ export async function generateBusReceiptPDF(data: BusReceiptData): Promise<Uint8
 }
 
 export function busReceiptFileName(data: BusReceiptData): string {
-  const owner = (data.participantName || data.toName || 'recibo')
+  const owner = (data.kind === 'DON' ? 'donativo' : data.participantName || data.toName || 'recibo')
     .replace(/[^\w\s-]/g, '')
     .trim()
     .replace(/\s+/g, '-');

@@ -18,6 +18,8 @@ export interface BusPassengerListData {
   congregationAddress?: string;
   congregationNumber?: string;
   arrangementTitle: string;
+  /** Escopo da lista: todos, quem pagou ou quem não pagou. */
+  scopeLabel?: string;
   /** Usado só se a chamada não informar sheets (arranjos antigos). */
   arrangementDate?: string;
   sheets: BusPassengerListSheet[];
@@ -119,8 +121,17 @@ const drawHeader = (
     font: regular,
     color: ACCENT,
   });
+  if (data.scopeLabel) {
+    page.drawText(sanitize(`Lista: ${data.scopeLabel}`), {
+      x: MARGIN,
+      y: y - 43,
+      size: 8.5,
+      font: bold,
+      color: INK,
+    });
+  }
 
-  y -= 50;
+  y -= data.scopeLabel ? 58 : 50;
 
   // Cabeçalho da tabela
   page.drawRectangle({
@@ -152,13 +163,16 @@ const drawFooter = (page: PDFPage, data: BusPassengerListData, regular: PDFFont,
     thickness: 0.8,
     color: LINE,
   });
-  page.drawText(`${data.passengers.length} passageiro(s) - somente quem já pagou`, {
-    x: MARGIN,
-    y: 44,
-    size: 9,
-    font: bold,
-    color: ACCENT,
-  });
+  page.drawText(
+    `${data.passengers.length} passageiro(s) - ${data.scopeLabel || 'somente quem já pagou'}`,
+    {
+      x: MARGIN,
+      y: 44,
+      size: 9,
+      font: bold,
+      color: ACCENT,
+    },
+  );
   page.drawText(sanitize(`Emitido em ${formatDateTime(data.generatedAt)}`), {
     x: MARGIN,
     y: 30,
@@ -267,5 +281,11 @@ export function busPassengerListFileName(data: BusPassengerListData): string {
     .replace(/[^\w\s-]/g, '')
     .trim()
     .replace(/\s+/g, '-');
-  return `lista-passageiros-${owner || 'onibus'}.pdf`;
+  const scope = (data.scopeLabel || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return `lista-passageiros-${owner || 'onibus'}${scope ? `-${scope}` : ''}.pdf`;
 }
